@@ -177,19 +177,18 @@ const colorizeMap = (colors = {}) => {
         });
 };
 
-// get a color ranging from green to red based on the given z-score
-const getGreenYellowRed = (zScore) => {
-    const maxVal = 255;
-    const blue = 0;
+// get a hue ranging from green to yellow to red based on the given z-score
+const getHue = (zScore) => {
+    return 120 / (1 + Math.exp(zScore));
+};
 
-    const size = 1 / (1 + Math.exp(-zScore));
-    const red = Math.floor(maxVal * size);
-    const green = maxVal - red;
-
-    const hexBase = 16;
-    const hexStringsRGB = [red, green, blue].map(
-        val => val.toString(hexBase).padStart(2, '0'));
-    return `#${hexStringsRGB.join('')}`;
+/* get a lightness value ranging from light to dark based on
+// relative population (input between 0 to 1, corresponding to min and max) */
+const getLightness = (relativePopulation) => {
+    const lowDensityEnd = 0.8;
+    const highDensityEnd = 0.4;
+    const range = lowDensityEnd - highDensityEnd;
+    return toPercentString(lowDensityEnd - (relativePopulation * range));
 };
 
 // find sum of an array
@@ -198,20 +197,61 @@ const getSum = (array) => array.reduce((acc, current) => acc + current, 0);
 // find mean of an array
 const getMean = (array) => array.length > 0 ? getSum(array) / array.length : 0;
 
+// find standard deviation of array
+const getStdev = (array, mean) => {
+    if (mean === undefined) {
+        mean = getMean(array);
+    }
+    const squaredDevs = array.map(val => (val - mean) ** 2);
+    return Math.sqrt(getMean(squaredDevs));
+};
+
+// find a z-score given mean and standard deviation
+const getZscore = (val, mean, stdev) => {
+    if (mean === undefined || stdev === undefined) {
+        throw 'Please provide mean and standard deviation';
+    }
+    return stdev > 0 ? (val - mean) / stdev : 0;
+};
+
+// convert decimal to integer percent
+const toPercentString = (decimal) => `${Math.round(100 * decimal)}%`;
+
+// get scaled value between 0 and 1
+const getRelativeAmount = (amount, min, range) => {
+    return range > 0 ? (amount - min) / range : min;
+};
+
 /* convert a time-series object indexed by FIPS codes into a
 // mapping from FIPS codes to array of colors produced by evaluating
 // colorFn on time-series values */
-const getColors = (series, colorFn) => {
-    const allValues = [].concat(...Object.values(series));
-    const mean = getMean(allValues);
-    const squaredDeviations = allValues.map(val => (val - mean) ** 2);
-    const std = Math.sqrt(getMean(squaredDeviations));
+const getColors = (countSeries, getHue, populations, getLightness) => {
+    const defaultLightness = '60%';
+    const allCounts = [].concat(...Object.values(countSeries));
+    const meanCounts = getMean(allCounts);
+    const stdevCounts = getStdev(allCounts, meanCounts);
+
+    let getLightnessFromCode;
+    if (!(populations && getLightness)) {
+        getLightnessFromCode = () => defaultLightness;
+    }
+    else {
+        const allPopulations = Object.values(populations);
+        const maxPopulation = Math.max(...allPopulations);
+        const minPopulation = Math.min(...allPopulations);
+        const populationRange = maxPopulation - minPopulation;
+        getLightnessFromCode = (code) => getLightness(
+            getRelativeAmount(populations[code], minPopulation, populationRange
+            ));
+    }
 
     const color = {};
-    Object.entries(series).forEach(([code, series]) => {
+    Object.entries(countSeries).forEach(([code, series]) => {
         color[code] = series.map(val => {
-            const normalized = std > 0 ? (val - mean) / std : 0.5;
-            return colorFn(normalized);
+            const normalizedCount = getZscore(val, meanCounts, stdevCounts);
+            const hue = getHue(normalizedCount);
+            const lightness = getLightnessFromCode(code);
+            return `hsl(${hue}, 100%, ${lightness})`;
         });
     });
     return color;
@@ -220,10 +260,11 @@ const getColors = (series, colorFn) => {
 /* play an animation using the given time-series object,
 // the given array of dates, the given frame rate (per second),
 // and the given color function */
-const playAnimation = (series, dates, frameRate = 20,
-    colorFn = getGreenYellowRed) => {
+const playAnimation = (dates, caseSeries, populations, frameRate = 20) => {
 
-    const colorSeries = getColors(series, colorFn);
+    const colorSeries = populations ?
+        getColors(caseSeries, getHue, populations, getLightness) :
+        getColors(caseSeries, getHue);
     const millisBetweenFrames = 1000 / frameRate;
 
     // load frame of given index
@@ -253,14 +294,12 @@ const main = async () => {
     getPopulationCSV().then(processPopulationCSV)]);
     resources.then(([mapSVG,
         { datesArray, cumulativeSeries }, countyPopulations]) => {
-        const changeSeries = calculateChangeSeries(
-            cumulativeSeries);
+        const changeSeries = calculateChangeSeries(cumulativeSeries);
         const changePerCapitaSeries = calculatePerCapitaSeries(
             changeSeries, countyPopulations);
         const sevenDayTrailing = getTrailingAverageSeries(
             changePerCapitaSeries, 7);
-        playAnimation(
-            sevenDayTrailing, datesArray);
+        playAnimation(datesArray, sevenDayTrailing);
     });
 };
 
