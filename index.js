@@ -138,14 +138,27 @@ const getTrailingAverageSeries = (series, trailSize = 1) => {
 
 // fetch the SVG county-level map and insert into HTML document
 const loadMap = async () => {
-    return fetch(MAP_LOCATION).then(res => res.text()).then(raw => {
+    fetch(MAP_LOCATION).then(res => res.text()).then(raw => {
         const parser = new DOMParser();
         const XMLTree = parser.parseFromString(raw, "image/svg+xml");
         const asNode = document.adoptNode(XMLTree.querySelector('svg'));
         document.getElementById(MAP_ID).replaceWith(asNode);
         asNode.id = MAP_ID;
-        return asNode;
     });
+}
+
+// fetch a mapping from FIPS codes to SVG nodes
+const getCountyNodes = (svgMap) => {
+    const countyNodes = {};
+    svgMap.querySelector('#counties').childNodes.forEach(node => {
+        const match = FIPS_REGEX.exec(node.id);
+        // ignore irrelevant nodes
+        if (match) {
+            const countyFIPS = padFIPS(match.groups.fips);
+            countyNodes[countyFIPS] = node;
+        }
+    });
+    return countyNodes;
 };
 
 // fetch the cumulative case-count CSV as a raw string
@@ -216,10 +229,10 @@ const validateCumulative = (cumulativeSeries) => {
 // calculate an object that holds change rather than accumulation */
 const calculateChangeSeries = (cumulativeSeries) => {
     const changeSeries = {};
-    Object.entries(cumulativeSeries).forEach(([code, values]) => {
-        changeSeries[code] = values.map((val, index, array) => {
-            return index > 0 ? val - array[index - 1] : val;
-        });
+    Object.entries(cumulativeSeries).forEach(([code, series]) => {
+        changeSeries[code] = series.map(
+            (val, index, array) => (index > 0 ? val - array[index - 1] : val)
+        );
     });
     return changeSeries;
 };
@@ -228,28 +241,22 @@ const calculateChangeSeries = (cumulativeSeries) => {
 // calculate an object that holds per-capita values */
 const calculatePerCapitaSeries = (totalSeries, countyPopulations) => {
     const perCapitaSeries = {};
-    Object.entries(totalSeries).forEach(([code, values]) => {
+    Object.entries(totalSeries).forEach(([code, series]) => {
         const population = countyPopulations[code];
-        perCapitaSeries[code] = values.map(
-            val => population > 0 ? val / population : 0);
+        perCapitaSeries[code] = series.map(
+            val => population > 0 ? val / population : 0
+        );
     });
     return perCapitaSeries;
 };
 
 // color the SVG using the provided mapping from FIPS codes to HTML hex codes
-const colorizeMap = (colors = {}) => {
-    const noDataColor = '#000000';
-    document.getElementById(MAP_ID).querySelector('#counties')
-        .childNodes.forEach(node => {
-            const match = FIPS_REGEX.exec(node.id);
-            // ignore irrelevant nodes
-            if (match) {
-                const countyFIPS = padFIPS(match.groups.fips);
-                const color = colors.hasOwnProperty(countyFIPS) ?
-                    colors[countyFIPS] : noDataColor;
-                node.style.fill = color;
-            }
-        });
+const colorizeMap = (countyElements, colors) => {
+    const fallbackColor = 'white';
+    Object.entries(countyElements).forEach(([code, mapNode]) => {
+        const color = colors.hasOwnProperty(code) ? colors[code] : fallbackColor;
+        mapNode.style.fill = color;
+    });
 };
 
 // get a hue ranging from green to yellow to red based on the given z-score
@@ -348,13 +355,14 @@ const playAnimation = (dates, caseSeries, populations, frameRate = 20) => {
         getColors(caseSeries, getHue);
     const millisBetweenFrames = 1000 / frameRate;
 
+    const countyNodes = getCountyNodes(document.getElementById(MAP_ID));
     // load frame of given index
     const loadFrame = (frameNum) => {
         const colors = {};
-        Object.entries(colorSeries).forEach(([code, values]) => {
-            colors[code] = values[frameNum];
-        });
-        colorizeMap(colors);
+        Object.entries(colorSeries).forEach(
+            ([code, series]) => colors[code] = series[frameNum]
+        );
+        colorizeMap(countyNodes, colors);
 
         // recurse on next frame
         const nextFrameNum = frameNum + 1;
