@@ -292,15 +292,15 @@ const main = async () => {
     const resources = Promise.all([loadMap(),
     getCumulativeCaseCSV().then(processCumulativeCaseCSV),
     getPopulationCSV().then(processPopulationCSV)]);
-    resources.then(([mapSVG,
-        { datesArray, cumulativeSeries }, countyPopulations]) => {
-        const changeSeries = calculateChangeSeries(cumulativeSeries);
-        const changePerCapitaSeries = calculatePerCapitaSeries(
-            changeSeries, countyPopulations);
-        const sevenDayTrailing = getTrailingAverageSeries(
-            changePerCapitaSeries, 7);
-        playAnimation(datesArray, sevenDayTrailing);
-    });
+    resources.then(
+        ([, { datesArray, cumulativeSeries }, countyPopulations]) => {
+            const changeSeries = calculateChangeSeries(cumulativeSeries);
+            const changePerCapitaSeries = calculatePerCapitaSeries(
+                changeSeries, countyPopulations);
+            const sevenDayTrailing = getTrailingAverageSeries(
+                changePerCapitaSeries, 7);
+            playAnimation(datesArray, sevenDayTrailing);
+        });
 };
 
 main();
