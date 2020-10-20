@@ -7,7 +7,78 @@ const MAP_ID = 'map';
 // locations of resources
 const MAP_LOCATION = './usa_counties.svg';
 const CUMULATIVE_CASES_LOCATION = './cumulative_cases.csv';
+const CUMULATIVE_DEATHS_LOCATION = './cumulative_deaths.csv';
 const POPULATIONS_LOCATION = './county_populations.csv';
+
+// mapping of datasets, indexed by bitwise OR of flags below
+const DATASETS = {};
+
+// dates used for the visualization
+let DATES;
+
+// populations of each county, indexed by FIPS code
+let COUNTY_POPULATIONS;
+
+// flag for whether dataset represents cases or deaths
+const QUANTITY = { cases: 0, deaths: 1 };
+
+// flag for whether dataset represents cumulative values or change
+const TYPE = { cumulative: 0, change: 2 };
+
+// flag for whether dataset represents totals or per-capita values
+const VALUE = { total: 0, perCapita: 4 };
+
+const maxFlag = getSum([QUANTITY, TYPE, VALUE].map(
+    flags => getSum(Object.values(flags))));
+
+/* Retrieve a dataset from the provided flag.
+// Return a promise that resolves to the desired dataset */
+const getDataset = async (datasetFlag) => {
+    // check that flag is in bounds
+    if (datasetFlag < 0 || maxFlag < datasetFlag) {
+        throw `Unknown flag: ${datasetFlag}`;
+    }
+
+    // calculate dataset if not present
+    if (!DATASETS[datasetFlag]) {
+        // 'relative' dataset: get corresponding absolute dataset
+        // as well as county populations, then process
+        if (datasetFlag >= VALUE.perCapita) {
+            const countyPopulations = COUNTY_POPULATIONS ?
+                Promise.resolve(COUNTY_POPULATIONS) :
+                getPopulationCSV().then(processPopulationCSV);
+
+            DATASETS[datasetFlag] = Promise.all(
+                [getDataset(datasetFlag - VALUE.perCapita), countyPopulations]
+            ).then(
+                ([total, populations]) => calculatePerCapitaSeries(
+                    total, populations)
+            );
+        }
+
+        // 'change' dataset: get corresponding cumulative dataset, then process
+        else if (datasetFlag >= TYPE.change) {
+            DATASETS[datasetFlag] = getDataset(datasetFlag - TYPE.change)
+                .then(calculateChangeSeries);
+        }
+
+        // recursive base cases:
+        // absolute cumulative deaths or cases
+        else {
+            const getCSV = (datasetFlag === QUANTITY.deaths) ?
+                getCumulativeDeathCSV :
+                getCumulativeCaseCSV;
+
+            DATASETS[datasetFlag] = getCSV().then(processCumulativeCSV).then(
+                ({ datesArray, cumulativeSeries }) => {
+                    DATES = datesArray;
+                    return cumulativeSeries;
+                }
+            );
+        }
+    }
+    return DATASETS[datasetFlag];
+};
 
 // ID of active setTimeout
 let CURRENT_TIMEOUT_ID;
@@ -49,7 +120,7 @@ class AverageBuffer {
     get average() {
         return this.currentAverage;
     }
-};
+}
 
 /* given a time-series object indexed by FIPS codes,
 // convert each sequence of values into a trailing average. */
@@ -82,6 +153,10 @@ const getCumulativeCaseCSV = async () => {
     return fetch(CUMULATIVE_CASES_LOCATION).then(res => res.text());
 };
 
+const getCumulativeDeathCSV = async () => {
+    return fetch(CUMULATIVE_DEATHS_LOCATION).then(res => res.text());
+}
+
 // fetch the county population CSV as a string
 const getPopulationCSV = async () => {
     return fetch(POPULATIONS_LOCATION).then(res => res.text());
@@ -90,7 +165,7 @@ const getPopulationCSV = async () => {
 /* process the cumulative case-count string into a
 // time-series object indexed by FIPS codes, also
 // returning a list of Date objects */
-const processCumulativeCaseCSV = (rawCSV, dataStartColumn = 4) => {
+const processCumulativeCSV = (rawCSV, dataStartColumn = 4) => {
     const cells = getArrayFromCSV(rawCSV);
     const cumulativeSeries = {};
     cells.slice(1).forEach(line => {
@@ -192,13 +267,17 @@ const getLightness = (relativePopulation) => {
 };
 
 // find sum of an array
-const getSum = (array) => array.reduce((acc, current) => acc + current, 0);
+function getSum(array) {
+    return array.reduce((acc, current) => acc + current, 0)
+};
 
 // find mean of an array
-const getMean = (array) => array.length > 0 ? getSum(array) / array.length : 0;
+function getMean(array) {
+    return array.length > 0 ? getSum(array) / array.length : 0
+};
 
 // find standard deviation of array
-const getStdev = (array, mean) => {
+function getStdev(array, mean) {
     if (mean === undefined) {
         mean = getMean(array);
     }
@@ -207,7 +286,7 @@ const getStdev = (array, mean) => {
 };
 
 // find a z-score given mean and standard deviation
-const getZscore = (val, mean, stdev) => {
+function getZscore(val, mean, stdev) {
     if (mean === undefined || stdev === undefined) {
         throw 'Please provide mean and standard deviation';
     }
@@ -215,10 +294,12 @@ const getZscore = (val, mean, stdev) => {
 };
 
 // convert decimal to integer percent
-const toPercentString = (decimal) => `${Math.round(100 * decimal)}%`;
+function toPercentString(decimal) {
+    return `${Math.round(100 * decimal)}%`;
+}
 
 // get scaled value between 0 and 1
-const getRelativeAmount = (amount, min, range) => {
+function getRelativeAmount(amount, min, range) {
     return range > 0 ? (amount - min) / range : min;
 };
 
@@ -289,18 +370,9 @@ const playAnimation = (dates, caseSeries, populations, frameRate = 20) => {
 
 /* main action on page */
 const main = async () => {
-    const resources = Promise.all([loadMap(),
-    getCumulativeCaseCSV().then(processCumulativeCaseCSV),
-    getPopulationCSV().then(processPopulationCSV)]);
-    resources.then(
-        ([, { datesArray, cumulativeSeries }, countyPopulations]) => {
-            const changeSeries = calculateChangeSeries(cumulativeSeries);
-            const changePerCapitaSeries = calculatePerCapitaSeries(
-                changeSeries, countyPopulations);
-            const sevenDayTrailing = getTrailingAverageSeries(
-                changePerCapitaSeries, 7);
-            playAnimation(datesArray, sevenDayTrailing);
-        });
+    await loadMap();
+    const dataset = await getDataset(5);
+    playAnimation(DATES, dataset);
 };
 
 main();
