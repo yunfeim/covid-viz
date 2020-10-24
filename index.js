@@ -449,18 +449,22 @@ const getAnimator = () => {
 }
 
 class Button {
+    selectedClass = 'selected';
+    spotlightedClass = 'spotlighted';
+    overshadowedClass = 'overshadowed';
+
     constructor(element) {
         this.element = element;
         this.isSelected = false;
     }
 
     select() {
-        this.element.classList.toggle('selected', true);
+        this.element.classList.toggle(this.selectedClass, true);
         this.isSelected = true;
     }
 
     deselect() {
-        this.element.classList.toggle('selected', false);
+        this.element.classList.toggle(this.selectedClass, false);
         this.isSelected = false;
     }
 
@@ -478,23 +482,23 @@ class Button {
             this.deselect();
         });
         this.element.addEventListener('mouseenter', () => {
-            this.element.classList.toggle('spotlighted', true);
-            opposing.element.classList.toggle('overshadowed', true);
+            this.element.classList.toggle(this.spotlightedClass, true);
+            opposing.element.classList.toggle(this.overshadowedClass, true);
         });
 
         this.element.addEventListener('mouseleave', () => {
-            this.element.classList.toggle('spotlighted', false);
-            opposing.element.classList.toggle('overshadowed', false);
+            this.element.classList.toggle(this.spotlightedClass, false);
+            opposing.element.classList.toggle(this.overshadowedClass, false);
         });
 
         opposing.element.addEventListener('mouseenter', () => {
-            opposing.element.classList.toggle('spotlighted', true);
-            this.element.classList.toggle('overshadowed', true);
+            opposing.element.classList.toggle(this.spotlightedClass, true);
+            this.element.classList.toggle(this.overshadowedClass, true);
         });
 
         opposing.element.addEventListener('mouseleave', () => {
-            opposing.element.classList.toggle('spotlighted', false);
-            this.element.classList.toggle('overshadowed', false);
+            opposing.element.classList.toggle(this.spotlightedClass, false);
+            this.element.classList.toggle(this.overshadowedClass, false);
         });
     }
 }

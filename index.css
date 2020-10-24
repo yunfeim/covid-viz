@@ -31,6 +31,12 @@ h1 {
     width: 100%;
 }
 
+#options-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1em 0;
+}
+
 #options-container>* {
     height: 2em;
 }
@@ -77,11 +83,15 @@ button {
 
 .binary-choice>*:hover {
     cursor: default;
-    background-color: var(--semi-bright-color);
+    background-color: var(--bright-color);
 }
 
 .binary-choice>*.selected:not(.overshadowed) {
     background-color: var(--bright-color);
+}
+
+.binary-choice>*.selected.overshadowed {
+    background-color: var(--semi-bright-color);
 }
 
 .range-container {
