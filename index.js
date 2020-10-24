@@ -41,11 +41,11 @@ const VALUE = { total: 0, perCapita: 4 };
 const maxFlag = getSum([QUANTITY, TYPE, VALUE].map(
     flags => getSum(Object.values(flags))));
 
-/* Retrieve a dataset from the provided flag.
+/* Retrieve a dataset from the provided identifiers.
 // Return a promise that resolves to the desired dataset */
 const getDataset = async (sourceFlag, trailingAverage = 1) => {
     // check that source flag is in bounds
-    if (sourceFlag < 0 || maxFlag < sourceFlag) {
+    if (!(0 <= sourceFlag && sourceFlag < maxFlag)) {
         throw `Unknown flag: ${sourceFlag}`;
     }
     // check that moving average is positive
@@ -499,8 +499,26 @@ class Button {
     }
 }
 
-/* load buttons from HTML and create mapping from strings to Button class*/
-const loadButtons = () => {
+class RangeSelector {
+    constructor(input, display) {
+        this.input = input;
+        this.display = display;
+
+        this.display.textContent = this.input.value;
+
+        this.input.addEventListener('input', () => {
+            this.display.textContent = this.input.value;
+        });
+    }
+
+    get value() {
+        return this.input.value;
+    }
+};
+
+/* load buttons from HTML and create mapping from strings to Button
+// and RangeSelector classes */
+const loadInputs = () => {
     const [cases, deaths] = document.querySelectorAll('#quantity>*');
     const [cumulative, change] = document.querySelectorAll('#type>*');
     const [total, perCapita] = document.querySelectorAll('#value>*');
@@ -509,7 +527,14 @@ const loadButtons = () => {
     Object.entries(elements).forEach(([name, element]) => {
         buttons[name] = new Button(element);
     });
-    return buttons;
+
+    const trailingAverage = (() => {
+        const input = document.getElementById('trailing-average');
+        const display = input.previousElementSibling;
+        return new RangeSelector(input, display);
+    })();
+
+    return { buttons, rangeSelectors: { trailingAverage } };
 }
 
 const initializeButtons = (buttons) => {
@@ -527,26 +552,29 @@ const initializeButtons = (buttons) => {
     perCapita.select();
 };
 
-/* find the desired dataset flag given the user's selected options */
-const calculateDatasetFlag = (buttons) => {
+/* find the identifier for the dataset matching the user's selected options */
+const calculateDatasetIdentifiers = ({ buttons, rangeSelectors }) => {
     const { deaths, change, perCapita } = buttons;
-    let flag = 0;
-    flag += deaths.selected ? QUANTITY.deaths : QUANTITY.cases;
-    flag += change.selected ? TYPE.change : TYPE.cumulative;
-    flag += perCapita.selected ? VALUE.perCapita : VALUE.total;
-    return flag;
+    let sourceFlag = 0;
+    sourceFlag += deaths.selected ? QUANTITY.deaths : QUANTITY.cases;
+    sourceFlag += change.selected ? TYPE.change : TYPE.cumulative;
+    sourceFlag += perCapita.selected ? VALUE.perCapita : VALUE.total;
+
+    const { trailingAverage } = rangeSelectors;
+    return [sourceFlag, trailingAverage.value];
 }
 
 /* main action on page */
 const main = async () => {
-    const buttons = loadButtons();
+    const { buttons, rangeSelectors } = loadInputs();
     initializeButtons(buttons);
     await loadMap();
     const playAnimation = getAnimator();
     const playButton = document.getElementById('play-button');
     playButton.addEventListener('click', async () => {
-        const datasetID = calculateDatasetFlag(buttons);
-        const [dates, dataset] = await getDataset(datasetID);
+        const [sourceFlag, trailingAverage] = calculateDatasetIdentifiers(
+            { buttons, rangeSelectors });
+        const [dates, dataset] = await getDataset(sourceFlag, trailingAverage);
         playAnimation(dates, dataset);
     });
 };

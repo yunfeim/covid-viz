@@ -86,11 +86,11 @@ button {
 
 .range-container {
     display: grid;
-    grid-template: 1fr / min-content 1fr;
+    grid-template: 1fr / repeat(2, min-content) 1fr;
 }
 
-.range-container>*:first-child {
-    white-space: nowrap;
+.range-container>span {
+    white-space: pre;
     display: inline-flex;
     align-items: center;
 }
