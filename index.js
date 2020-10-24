@@ -14,13 +14,11 @@ const CUMULATIVE_DEATHS_LOCATION = './cumulative_deaths.csv';
 const POPULATIONS_LOCATION = './county_populations.csv';
 
 // mapping of datasets, indexed by bitwise OR of flags below
+// also has county populations stored as `populationKey`
 const DATASETS = {};
 
-// dates used for the visualization
-let DATES;
-
-// populations of each county, indexed by FIPS code
-let COUNTY_POPULATIONS;
+// key for population dataset
+const POPULATION_KEY = 'populations';
 
 // flag for whether dataset represents cases or deaths
 const QUANTITY = { cases: 0, deaths: 1 };
@@ -30,9 +28,6 @@ const TYPE = { cumulative: 0, change: 2 };
 
 // flag for whether dataset represents totals or per-capita values
 const VALUE = { total: 0, perCapita: 4 };
-
-// ID of the current task to ensure only one task is active at any time
-let CURRENT_TASK;
 
 const maxFlag = getSum([QUANTITY, TYPE, VALUE].map(
     flags => getSum(Object.values(flags))));
@@ -50,22 +45,29 @@ const getDataset = async (datasetFlag) => {
         // 'relative' dataset: get corresponding absolute dataset
         // as well as county populations, then process
         if (datasetFlag >= VALUE.perCapita) {
-            const countyPopulations = COUNTY_POPULATIONS ?
-                Promise.resolve(COUNTY_POPULATIONS) :
+            const countyPopulations = DATASETS[POPULATION_KEY] ?
+                Promise.resolve(DATASETS[POPULATION_KEY]) :
                 getPopulationCSV().then(processPopulationCSV);
 
             DATASETS[datasetFlag] = Promise.all(
                 [getDataset(datasetFlag - VALUE.perCapita), countyPopulations]
             ).then(
-                ([total, populations]) => calculatePerCapitaSeries(
-                    total, populations)
+                ([[dates, total], populations]) => {
+                    DATASETS[POPULATION_KEY] = populations;
+                    const perCapita = calculatePerCapitaSeries(
+                        total, populations);
+                    return [dates, perCapita];
+                }
             );
         }
 
         // 'change' dataset: get corresponding cumulative dataset, then process
         else if (datasetFlag >= TYPE.change) {
             DATASETS[datasetFlag] = getDataset(datasetFlag - TYPE.change)
-                .then(calculateChangeSeries);
+                .then(([dates, cumulative]) => {
+                    const change = calculateChangeSeries(cumulative);
+                    return [dates, change];
+                });
         }
 
         // recursive base cases:
@@ -76,10 +78,8 @@ const getDataset = async (datasetFlag) => {
                 getCumulativeCaseCSV;
 
             DATASETS[datasetFlag] = getCSV().then(processCumulativeCSV).then(
-                ({ datesArray, cumulativeSeries }) => {
-                    DATES = datesArray;
-                    return cumulativeSeries;
-                }
+                ({ datesArray, cumulativeSeries }
+                ) => [datesArray, cumulativeSeries]
             );
         }
     }
@@ -358,48 +358,57 @@ const formatDate = (date) => {
     return fullString.slice(start, end);
 }
 
-/* play an animation using the given time-series object,
-// the given array of dates, the given frame rate (per second),
-// and the given color function */
-const playAnimation = (caseSeries, populations, frameRate = 10) => {
+/* Return a function that plays an animation.
+// ensures that only one animation is active at any time */
+const getAnimator = () => {
+    // ID of the current task to ensure only one task is active at any time
+    let current_task;
 
-    const colorSeries = populations ?
-        getColors(caseSeries, getHue, populations, getLightness) :
-        getColors(caseSeries, getHue);
-    const millisBetweenFrames = 1000 / frameRate;
+    /* play an animation using the given time-series object,
+    // the given array of dates, the given frame rate (per second),
+    // and the given color function */
+    const playAnimation = (dates, caseSeries, populations, frameRate = 10) => {
 
-    const countyNodes = getCountyNodes(document.getElementById(MAP_ID));
-    const dateElem = document.getElementById(DATE_DISPLAY_ID);
-    const dateStrings = DATES.map(formatDate);
+        const colorSeries = populations ?
+            getColors(caseSeries, getHue, populations, getLightness) :
+            getColors(caseSeries, getHue);
+        const millisBetweenFrames = 1000 / frameRate;
 
-    // set current task as running
-    const taskID = Date.now();
-    CURRENT_TASK = taskID;
+        const countyNodes = getCountyNodes(document.getElementById(MAP_ID));
+        const dateElem = document.getElementById(DATE_DISPLAY_ID);
+        const dateStrings = dates.map(formatDate);
 
-    // load frame of given index
-    const loadFrame = (frameNum) => {
-        // terminate if new task is running
-        if (CURRENT_TASK !== taskID) {
-            return;
-        }
-        dateElem.textContent = dateStrings[frameNum];
-        const colors = {};
-        Object.entries(colorSeries).forEach(
-            ([code, series]) => colors[code] = series[frameNum]
-        );
-        colorizeMap(countyNodes, colors);
+        // set current task as running
+        const taskID = Date.now();
+        current_task = taskID;
 
-        // recurse on next frame
-        const nextFrameNum = frameNum + 1;
-        if (nextFrameNum < dateStrings.length) {
-            clearTimeout(CURRENT_TIMEOUT_ID);
-            CURRENT_TIMEOUT_ID = setTimeout(
-                () => loadFrame(nextFrameNum),
-                millisBetweenFrames);
-        }
+        // load frame of given index
+        const loadFrame = (frameNum) => {
+            // terminate if new task is running
+            if (current_task !== taskID) {
+                return;
+            }
+            dateElem.textContent = dateStrings[frameNum];
+            const colors = {};
+            Object.entries(colorSeries).forEach(
+                ([code, series]) => colors[code] = series[frameNum]
+            );
+            colorizeMap(countyNodes, colors);
+
+            // recurse on next frame
+            const nextFrameNum = frameNum + 1;
+            if (nextFrameNum < dateStrings.length) {
+                clearTimeout(CURRENT_TIMEOUT_ID);
+                CURRENT_TIMEOUT_ID = setTimeout(
+                    () => loadFrame(nextFrameNum),
+                    millisBetweenFrames);
+            }
+        };
+        loadFrame(0);
     };
-    loadFrame(0);
-};
+
+    return playAnimation;
+}
 
 class Button {
     constructor(element) {
@@ -476,11 +485,12 @@ const main = async () => {
     const buttons = loadButtons();
     initializeButtons(buttons);
     await loadMap();
+    const playAnimation = getAnimator();
     const playButton = document.getElementById('play-button');
     playButton.addEventListener('click', async () => {
         const datasetID = calculateDatasetFlag(buttons);
-        const dataset = await getDataset(datasetID);
-        playAnimation(dataset);
+        const [dates, dataset] = await getDataset(datasetID);
+        playAnimation(dates, dataset);
     });
 };
 
