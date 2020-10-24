@@ -13,9 +13,18 @@ const CUMULATIVE_CASES_LOCATION = './cumulative_cases.csv';
 const CUMULATIVE_DEATHS_LOCATION = './cumulative_deaths.csv';
 const POPULATIONS_LOCATION = './county_populations.csv';
 
-// mapping of datasets, indexed by bitwise OR of flags below
-// also has county populations stored as `populationKey`
+/* mapping of datasets, calculated on an as-needed basis.
+// also has county populations stored as `populationKey`.
+// each dataset ID consist of two parts as encoded by the `encode` function:
+// a source flag, which is a bitwise OR of the values from the flags below,
+// as well as an integer for the size of the trailing average */
 const DATASETS = {};
+
+// find the key for the dataset with the given source flag and
+// trailing average information
+const encode = (sourceFlag, trailingAverage) => (
+    `${sourceFlag}-${trailingAverage}`
+);
 
 // key for population dataset
 const POPULATION_KEY = 'populations';
@@ -34,23 +43,33 @@ const maxFlag = getSum([QUANTITY, TYPE, VALUE].map(
 
 /* Retrieve a dataset from the provided flag.
 // Return a promise that resolves to the desired dataset */
-const getDataset = async (datasetFlag) => {
-    // check that flag is in bounds
-    if (datasetFlag < 0 || maxFlag < datasetFlag) {
-        throw `Unknown flag: ${datasetFlag}`;
+const getDataset = async (sourceFlag, trailingAverage = 1) => {
+    // check that source flag is in bounds
+    if (sourceFlag < 0 || maxFlag < sourceFlag) {
+        throw `Unknown flag: ${sourceFlag}`;
+    }
+    // check that moving average is positive
+    if (!(trailingAverage > 0)) {
+        throw 'Moving average must be positive';
     }
 
+    const datasetKey = encode(sourceFlag, trailingAverage);
+
     // calculate dataset if not present
-    if (!DATASETS[datasetFlag]) {
-        // 'relative' dataset: get corresponding absolute dataset
+    if (!DATASETS[datasetKey]) {
+        // 'per capita' dataset: get corresponding total dataset
         // as well as county populations, then process
-        if (datasetFlag >= VALUE.perCapita) {
+        if (sourceFlag >= VALUE.perCapita) {
+            const totalDataset = getDataset(
+                sourceFlag - VALUE.perCapita, trailingAverage
+            );
+
             const countyPopulations = DATASETS[POPULATION_KEY] ?
                 Promise.resolve(DATASETS[POPULATION_KEY]) :
                 getPopulationCSV().then(processPopulationCSV);
 
-            DATASETS[datasetFlag] = Promise.all(
-                [getDataset(datasetFlag - VALUE.perCapita), countyPopulations]
+            DATASETS[datasetKey] = Promise.all(
+                [totalDataset, countyPopulations]
             ).then(
                 ([[dates, total], populations]) => {
                     DATASETS[POPULATION_KEY] = populations;
@@ -62,28 +81,47 @@ const getDataset = async (datasetFlag) => {
         }
 
         // 'change' dataset: get corresponding cumulative dataset, then process
-        else if (datasetFlag >= TYPE.change) {
-            DATASETS[datasetFlag] = getDataset(datasetFlag - TYPE.change)
-                .then(([dates, cumulative]) => {
+        else if (sourceFlag >= TYPE.change) {
+            const cumulativeDataset = getDataset(
+                sourceFlag - TYPE.change, trailingAverage
+            );
+
+            DATASETS[datasetKey] = cumulativeDataset.then(
+                ([dates, cumulative]) => {
                     const change = calculateChangeSeries(cumulative);
                     return [dates, change];
                 });
         }
 
-        // recursive base cases:
-        // absolute cumulative deaths or cases
+        // base cases for source flag:
+        // total cumulative deaths or cases
         else {
-            const getCSV = (datasetFlag === QUANTITY.deaths) ?
+            const getBaseCSV = (sourceFlag === QUANTITY.deaths) ?
                 getCumulativeDeathCSV :
                 getCumulativeCaseCSV;
 
-            DATASETS[datasetFlag] = getCSV().then(processCumulativeCSV).then(
-                ({ datesArray, cumulativeSeries }
-                ) => [datesArray, cumulativeSeries]
-            );
+            const trailingAverageBaseCase = 1;
+            const baseDatasetKey = encode(sourceFlag, trailingAverageBaseCase);
+            DATASETS[baseDatasetKey] = getBaseCSV()
+                .then(processCumulativeCSV).then(
+                    (
+                        { datesArray, cumulativeSeries }
+                    ) => [datesArray, cumulativeSeries]
+                );
+
+            // apply trailing average to corresponding base dataset
+            // unless the trailing average is 1 (no processing needed)
+            if (trailingAverage !== trailingAverageBaseCase) {
+                DATASETS[datasetKey] = DATASETS[baseDatasetKey].then(
+                    ([dates, baseSeries]) => [
+                        dates,
+                        getTrailingAverageSeries(baseSeries, trailingAverage)
+                    ]
+                );
+            }
         }
     }
-    return DATASETS[datasetFlag];
+    return DATASETS[datasetKey];
 };
 
 // ID of active setTimeout
@@ -465,8 +503,8 @@ class Button {
 const loadButtons = () => {
     const [cases, deaths] = document.querySelectorAll('#quantity>*');
     const [cumulative, change] = document.querySelectorAll('#type>*');
-    const [absolute, perCapita] = document.querySelectorAll('#value>*');
-    const elements = { cases, deaths, cumulative, change, absolute, perCapita };
+    const [total, perCapita] = document.querySelectorAll('#value>*');
+    const elements = { cases, deaths, cumulative, change, total, perCapita };
     const buttons = {};
     Object.entries(elements).forEach(([name, element]) => {
         buttons[name] = new Button(element);
@@ -476,12 +514,12 @@ const loadButtons = () => {
 
 const initializeButtons = (buttons) => {
     const {
-        cases, deaths, cumulative, change, absolute, perCapita
+        cases, deaths, cumulative, change, total, perCapita
     } = buttons;
 
     cases.setMouseActionWithOpposing(deaths);
     cumulative.setMouseActionWithOpposing(change);
-    absolute.setMouseActionWithOpposing(perCapita);
+    total.setMouseActionWithOpposing(perCapita);
 
     // set initial options
     cases.select();
@@ -495,7 +533,7 @@ const calculateDatasetFlag = (buttons) => {
     let flag = 0;
     flag += deaths.selected ? QUANTITY.deaths : QUANTITY.cases;
     flag += change.selected ? TYPE.change : TYPE.cumulative;
-    flag += perCapita.selected ? VALUE.perCapita : VALUE.absolute;
+    flag += perCapita.selected ? VALUE.perCapita : VALUE.total;
     return flag;
 }
 
