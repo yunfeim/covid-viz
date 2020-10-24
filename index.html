@@ -8,22 +8,27 @@
 </head>
 
 <body>
+    <h1>COVID Visualizer</h1>
     <main>
         <section id="options-container">
-            <div class="option" id="quantity">
-                <div>Cases</div>
-                <div>Deaths</div>
-            </div>
-            <div class="option" id="type">
-                <div>Cumulative</div>
-                <div>Change</div>
-            </div>
-            <div class="option" id="value">
-                <div>Total</div>
-                <div>Per Capita</div>
-            </div>
+            <article class="binary-choice" id="quantity">
+                <button>Cases</button>
+                <button>Deaths</button>
+            </article>
+            <article class="binary-choice" id="type">
+                <button>Cumulative</button>
+                <button>Change</button>
+            </article>
+            <article class="binary-choice" id="value">
+                <button>Total</button>
+                <button>Per Capita</button>
+            </article>
+            <article class="range-container">
+                <span>Trailing average:</span>
+                <input id="trailing-average" type="range" class="option" min="1" max="14" step="1" />
+            </article>
         </section>
-        <div id="play-button">Play</div>
+        <button id="play-button">Play</button>
         <section id="viz-container">
             <div id="date-display"></div>
             <div id="map"></div>

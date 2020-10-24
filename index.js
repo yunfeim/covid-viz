@@ -430,7 +430,7 @@ class Button {
         return this.isSelected;
     }
 
-    setOpposingButton(opposing) {
+    setMouseActionWithOpposing(opposing) {
         this.element.addEventListener('click', () => {
             this.select();
             opposing.deselect();
@@ -438,6 +438,25 @@ class Button {
         opposing.element.addEventListener('click', () => {
             opposing.select();
             this.deselect();
+        });
+        this.element.addEventListener('mouseenter', () => {
+            this.element.classList.toggle('spotlighted', true);
+            opposing.element.classList.toggle('overshadowed', true);
+        });
+
+        this.element.addEventListener('mouseleave', () => {
+            this.element.classList.toggle('spotlighted', false);
+            opposing.element.classList.toggle('overshadowed', false);
+        });
+
+        opposing.element.addEventListener('mouseenter', () => {
+            opposing.element.classList.toggle('spotlighted', true);
+            this.element.classList.toggle('overshadowed', true);
+        });
+
+        opposing.element.addEventListener('mouseleave', () => {
+            opposing.element.classList.toggle('spotlighted', false);
+            this.element.classList.toggle('overshadowed', false);
         });
     }
 }
@@ -460,9 +479,9 @@ const initializeButtons = (buttons) => {
         cases, deaths, cumulative, change, absolute, perCapita
     } = buttons;
 
-    cases.setOpposingButton(deaths);
-    cumulative.setOpposingButton(change);
-    absolute.setOpposingButton(perCapita);
+    cases.setMouseActionWithOpposing(deaths);
+    cumulative.setMouseActionWithOpposing(change);
+    absolute.setMouseActionWithOpposing(perCapita);
 
     // set initial options
     cases.select();

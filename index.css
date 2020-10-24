@@ -1,11 +1,24 @@
+:root {
+    --plain-color: #F0F0F0;
+    --semi-bright-color: #FFDD44;
+    --bright-color: #FFAA22;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
 body {
     max-width: 80ch;
     margin: 0 auto;
 }
 
+h1 {
+    text-align: center;
+}
+
 #date-display {
+    display: block;
     width: 100%;
     text-align: center;
+    height: 1em;
 }
 
 #map {
@@ -13,42 +26,71 @@ body {
     width: 100%;
 }
 
-.option {
-    display: grid;
-    grid-template: 1fr / repeat(2, 1fr);
+#average {
+    display: inline-block;
+    width: 100%;
+}
+
+#options-container>* {
     height: 2em;
 }
 
-.option>* {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #EEEEEE;
-}
-
-.option>*:first-child {
-    border-radius: 1ch 0 0 1ch;
-}
-
-.option>*:last-child {
-    border-radius: 0 1ch 1ch 0;
-}
-
-.option>*:hover {
-    font-weight: bold;
-    cursor: default;
-}
-
-.option>*.selected {
-    background-color: coral;
-}
-
 #play-button {
+    margin: 1em 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 2em;
+    border-radius: 1ch;
+    background-color: var(--plain-color);
 }
 
 #play-button:hover {
-    background-color: coral;
+    background-color: var(--bright-color);
+}
+
+.binary-choice {
+    display: grid;
+    grid-template: 1fr / repeat(2, 1fr);
+}
+
+button {
+    width: 100%;
+    border-width: 0;
+    outline-width: 0;
+}
+
+.binary-choice>* {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--plain-color);
+}
+
+.binary-choice>*:first-child {
+    border-radius: 1ch 0 0 1ch;
+}
+
+.binary-choice>*:last-child {
+    border-radius: 0 1ch 1ch 0;
+}
+
+.binary-choice>*:hover {
+    cursor: default;
+    background-color: var(--semi-bright-color);
+}
+
+.binary-choice>*.selected:not(.overshadowed) {
+    background-color: var(--bright-color);
+}
+
+.range-container {
+    display: grid;
+    grid-template: 1fr / min-content 1fr;
+}
+
+.range-container>*:first-child {
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
 }
