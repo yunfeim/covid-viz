@@ -556,6 +556,32 @@ const initializeButtons = (buttons) => {
     perCapita.select();
 };
 
+/* set up the help icons to display a help dialog */
+const initializeHelpDialogs = async () => {
+    const helpSystem = document.getElementById('help-system').content;
+    const helpSVG = await fetch('./question-mark.svg')
+        .then(res => res.text()).then(raw => {
+            const parser = new DOMParser();
+            return parser.parseFromString(raw, 'image/svg+xml')
+                .querySelector('svg');
+        });
+
+    const optionsContainer = document.getElementById('options-container');
+    for (const option of optionsContainer.children) {
+        if (option.hasAttribute('data-help')) {
+            const [helpButton, helpDialog] = helpSystem
+                .cloneNode(true).children;
+            option.append(helpButton, helpDialog);
+            const icon = document.adoptNode(helpSVG.cloneNode(true));
+            helpButton.querySelector('svg').replaceWith(icon);
+            helpDialog.textContent = option.getAttribute('data-help');
+            helpButton.addEventListener('click', () => {
+                helpDialog.hidden = !helpDialog.hidden;
+            });
+        }
+    }
+};
+
 /* find the identifier for the dataset matching the user's selected options */
 const calculateDatasetIdentifiers = ({ buttons, rangeSelectors }) => {
     const { deaths, change, perCapita } = buttons;
@@ -570,9 +596,10 @@ const calculateDatasetIdentifiers = ({ buttons, rangeSelectors }) => {
 
 /* main action on page */
 const main = async () => {
+    await loadMap();
     const { buttons, rangeSelectors } = loadInputs();
     initializeButtons(buttons);
-    await loadMap();
+    await initializeHelpDialogs();
     const playAnimation = getAnimator();
     const playButton = document.getElementById('play-button');
     playButton.addEventListener('click', async () => {

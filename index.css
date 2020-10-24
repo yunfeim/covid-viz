@@ -37,8 +37,11 @@ h1 {
     gap: 1em 0;
 }
 
-#options-container>* {
-    height: 2em;
+#options-container>.binary-choice {
+    --first-line-height: 2em;
+    min-height: var(--first-line-height);
+    display: grid;
+    grid-template: var(--first-line-height) min-content / repeat(2, 1fr) 2ch;
 }
 
 #play-button {
@@ -60,37 +63,54 @@ h1 {
     grid-template: 1fr / repeat(2, 1fr);
 }
 
+.help {
+    display: flex;
+    align-items: center;
+    padding: 0 20%;
+}
+
+.help>svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.help-content {
+    grid-column: 1 / 3;
+    padding-inline-start: 4ch;
+}
+
 button {
     width: 100%;
     border-width: 0;
     outline-width: 0;
 }
 
-.binary-choice>* {
+.binary-choice>button {
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: var(--plain-color);
 }
 
-.binary-choice>*:first-child {
+.binary-choice>button:first-of-type {
     border-radius: 1ch 0 0 1ch;
 }
 
-.binary-choice>*:last-child {
+.binary-choice>button:last-of-type {
     border-radius: 0 1ch 1ch 0;
 }
 
-.binary-choice>*:hover {
+.binary-choice>button:hover {
     cursor: default;
     background-color: var(--bright-color);
 }
 
-.binary-choice>*.selected:not(.overshadowed) {
+.binary-choice>button.selected:not(.overshadowed) {
     background-color: var(--bright-color);
 }
 
-.binary-choice>*.selected.overshadowed {
+.binary-choice>button.selected.overshadowed {
     background-color: var(--semi-bright-color);
 }
 

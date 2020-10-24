@@ -6,6 +6,12 @@
     <script src="index.js" defer></script>
     <link href="index.css" rel="stylesheet" />
 </head>
+<template id="help-system">
+    <div class="help">
+        <svg></svg>
+    </div>
+    <div class="help-content" hidden></div>
+</template>
 
 <body>
     <h1>COVID Visualizer</h1>
@@ -15,11 +21,11 @@
                 <button>Cases</button>
                 <button>Deaths</button>
             </article>
-            <article class="binary-choice" id="type">
+            <article class="binary-choice" id="type" data-help="Whether to show the cumulative count for a region or to show the day-by-day change">
                 <button>Cumulative</button>
                 <button>Change</button>
             </article>
-            <article class="binary-choice" id="value">
+            <article class="binary-choice" id="value" data-help="Whether to show the total count in a region or the total count divided by the corresponding population">
                 <button>Total</button>
                 <button>Per Capita</button>
             </article>
@@ -32,7 +38,7 @@
         <button id="play-button">Play</button>
         <section id="viz-container">
             <div id="date-display"></div>
-            <div id="map"></div>
+            <svg id="map"></svg>
         </section>
     </main>
 </body>
