@@ -31,6 +31,9 @@ const TYPE = { cumulative: 0, change: 2 };
 // flag for whether dataset represents totals or per-capita values
 const VALUE = { total: 0, perCapita: 4 };
 
+// ID of the current task to ensure only one task is active at any time
+let CURRENT_TASK;
+
 const maxFlag = getSum([QUANTITY, TYPE, VALUE].map(
     flags => getSum(Object.values(flags))));
 
@@ -358,7 +361,7 @@ const formatDate = (date) => {
 /* play an animation using the given time-series object,
 // the given array of dates, the given frame rate (per second),
 // and the given color function */
-const playAnimation = (caseSeries, populations, frameRate = 20) => {
+const playAnimation = (caseSeries, populations, frameRate = 10) => {
 
     const colorSeries = populations ?
         getColors(caseSeries, getHue, populations, getLightness) :
@@ -369,8 +372,16 @@ const playAnimation = (caseSeries, populations, frameRate = 20) => {
     const dateElem = document.getElementById(DATE_DISPLAY_ID);
     const dateStrings = DATES.map(formatDate);
 
+    // set current task as running
+    const taskID = Date.now();
+    CURRENT_TASK = taskID;
+
     // load frame of given index
     const loadFrame = (frameNum) => {
+        // terminate if new task is running
+        if (CURRENT_TASK !== taskID) {
+            return;
+        }
         dateElem.textContent = dateStrings[frameNum];
         const colors = {};
         Object.entries(colorSeries).forEach(
@@ -390,11 +401,87 @@ const playAnimation = (caseSeries, populations, frameRate = 20) => {
     loadFrame(0);
 };
 
+class Button {
+    constructor(element) {
+        this.element = element;
+        this.isSelected = false;
+    }
+
+    select() {
+        this.element.classList.toggle('selected', true);
+        this.isSelected = true;
+    }
+
+    deselect() {
+        this.element.classList.toggle('selected', false);
+        this.isSelected = false;
+    }
+
+    get selected() {
+        return this.isSelected;
+    }
+
+    setOpposingButton(opposing) {
+        this.element.addEventListener('click', () => {
+            this.select();
+            opposing.deselect();
+        });
+        opposing.element.addEventListener('click', () => {
+            opposing.select();
+            this.deselect();
+        });
+    }
+}
+
+/* load buttons from HTML and create mapping from strings to Button class*/
+const loadButtons = () => {
+    const [cases, deaths] = document.querySelectorAll('#quantity>*');
+    const [cumulative, change] = document.querySelectorAll('#type>*');
+    const [absolute, perCapita] = document.querySelectorAll('#value>*');
+    const elements = { cases, deaths, cumulative, change, absolute, perCapita };
+    const buttons = {};
+    Object.entries(elements).forEach(([name, element]) => {
+        buttons[name] = new Button(element);
+    });
+    return buttons;
+}
+
+const initializeButtons = (buttons) => {
+    const {
+        cases, deaths, cumulative, change, absolute, perCapita
+    } = buttons;
+
+    cases.setOpposingButton(deaths);
+    cumulative.setOpposingButton(change);
+    absolute.setOpposingButton(perCapita);
+
+    // set initial options
+    cases.select();
+    change.select();
+    perCapita.select();
+};
+
+/* find the desired dataset flag given the user's selected options */
+const calculateDatasetFlag = (buttons) => {
+    const { deaths, change, perCapita } = buttons;
+    let flag = 0;
+    flag += deaths.selected ? QUANTITY.deaths : QUANTITY.cases;
+    flag += change.selected ? TYPE.change : TYPE.cumulative;
+    flag += perCapita.selected ? VALUE.perCapita : VALUE.absolute;
+    return flag;
+}
+
 /* main action on page */
 const main = async () => {
+    const buttons = loadButtons();
+    initializeButtons(buttons);
     await loadMap();
-    const dataset = await getDataset(5);
-    playAnimation(dataset);
+    const playButton = document.getElementById('play-button');
+    playButton.addEventListener('click', async () => {
+        const datasetID = calculateDatasetFlag(buttons);
+        const dataset = await getDataset(datasetID);
+        playAnimation(dataset);
+    });
 };
 
 main();

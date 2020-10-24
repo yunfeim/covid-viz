@@ -4,14 +4,30 @@
 <head>
     <title></title>
     <script src="index.js" defer></script>
+    <link href="index.css" rel="stylesheet" />
 </head>
 
 <body>
     <main>
-        <div id="viz-container">
+        <section id="options-container">
+            <div class="option" id="quantity">
+                <div>Cases</div>
+                <div>Deaths</div>
+            </div>
+            <div class="option" id="type">
+                <div>Cumulative</div>
+                <div>Change</div>
+            </div>
+            <div class="option" id="value">
+                <div>Total</div>
+                <div>Per Capita</div>
+            </div>
+        </section>
+        <div id="play-button">Play</div>
+        <section id="viz-container">
             <div id="date-display"></div>
             <div id="map"></div>
-        </div>
+        </section>
     </main>
 </body>
 

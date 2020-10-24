@@ -1,0 +1,54 @@
+body {
+    max-width: 80ch;
+    margin: 0 auto;
+}
+
+#date-display {
+    width: 100%;
+    text-align: center;
+}
+
+#map {
+    display: block;
+    width: 100%;
+}
+
+.option {
+    display: grid;
+    grid-template: 1fr / repeat(2, 1fr);
+    height: 2em;
+}
+
+.option>* {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #EEEEEE;
+}
+
+.option>*:first-child {
+    border-radius: 1ch 0 0 1ch;
+}
+
+.option>*:last-child {
+    border-radius: 0 1ch 1ch 0;
+}
+
+.option>*:hover {
+    font-weight: bold;
+    cursor: default;
+}
+
+.option>*.selected {
+    background-color: coral;
+}
+
+#play-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#play-button:hover {
+    background-color: coral;
+}
