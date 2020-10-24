@@ -4,6 +4,9 @@ const FIPS_REGEX = new RegExp('(?<fips>\\d{4,5})$');
 // ID of map object in HTML
 const MAP_ID = 'map';
 
+// ID of date box in HTML
+const DATE_DISPLAY_ID = 'date-display';
+
 // locations of resources
 const MAP_LOCATION = './usa_counties.svg';
 const CUMULATIVE_CASES_LOCATION = './cumulative_cases.csv';
@@ -345,10 +348,17 @@ const getColors = (countSeries, getHue, populations, getLightness) => {
     return color;
 };
 
+/* Convert date into custom string representation for display */
+const formatDate = (date) => {
+    const fullString = date.toUTCString();
+    const [start, end] = [5, 16];
+    return fullString.slice(start, end);
+}
+
 /* play an animation using the given time-series object,
 // the given array of dates, the given frame rate (per second),
 // and the given color function */
-const playAnimation = (dates, caseSeries, populations, frameRate = 20) => {
+const playAnimation = (caseSeries, populations, frameRate = 20) => {
 
     const colorSeries = populations ?
         getColors(caseSeries, getHue, populations, getLightness) :
@@ -356,8 +366,12 @@ const playAnimation = (dates, caseSeries, populations, frameRate = 20) => {
     const millisBetweenFrames = 1000 / frameRate;
 
     const countyNodes = getCountyNodes(document.getElementById(MAP_ID));
+    const dateElem = document.getElementById(DATE_DISPLAY_ID);
+    const dateStrings = DATES.map(formatDate);
+
     // load frame of given index
     const loadFrame = (frameNum) => {
+        dateElem.textContent = dateStrings[frameNum];
         const colors = {};
         Object.entries(colorSeries).forEach(
             ([code, series]) => colors[code] = series[frameNum]
@@ -366,7 +380,7 @@ const playAnimation = (dates, caseSeries, populations, frameRate = 20) => {
 
         // recurse on next frame
         const nextFrameNum = frameNum + 1;
-        if (nextFrameNum < dates.length) {
+        if (nextFrameNum < dateStrings.length) {
             clearTimeout(CURRENT_TIMEOUT_ID);
             CURRENT_TIMEOUT_ID = setTimeout(
                 () => loadFrame(nextFrameNum),
@@ -380,7 +394,7 @@ const playAnimation = (dates, caseSeries, populations, frameRate = 20) => {
 const main = async () => {
     await loadMap();
     const dataset = await getDataset(5);
-    playAnimation(DATES, dataset);
+    playAnimation(dataset);
 };
 
 main();
