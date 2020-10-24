@@ -9,9 +9,9 @@ const DATE_DISPLAY_ID = 'date-display';
 
 // locations of resources
 const MAP_LOCATION = './usa_counties.svg';
-const CUMULATIVE_CASES_LOCATION = './cumulative_cases.csv';
-const CUMULATIVE_DEATHS_LOCATION = './cumulative_deaths.csv';
-const POPULATIONS_LOCATION = './county_populations.csv';
+const CUMULATIVE_CASES_LOCATION = './data/cumulative_cases.csv';
+const CUMULATIVE_DEATHS_LOCATION = './data/cumulative_deaths.csv';
+const POPULATIONS_LOCATION = './data/county_populations.csv';
 
 /* mapping of datasets, calculated on an as-needed basis.
 // also has county populations stored as `populationKey`.
