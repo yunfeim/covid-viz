@@ -1,0 +1,1 @@
+This directory stores dataset files that the server-side code caches.
