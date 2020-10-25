@@ -45,7 +45,7 @@ const maxFlag = getSum([QUANTITY, TYPE, VALUE].map(
 // Return a promise that resolves to the desired dataset */
 const getDataset = async (sourceFlag, trailingAverage = 1) => {
     // check that source flag is in bounds
-    if (!(0 <= sourceFlag && sourceFlag < maxFlag)) {
+    if (!(0 <= sourceFlag && sourceFlag <= maxFlag)) {
         throw `Unknown flag: ${sourceFlag}`;
     }
     // check that moving average is positive
