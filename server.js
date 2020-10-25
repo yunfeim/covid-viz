@@ -34,23 +34,23 @@ const initializeSmartEndpoint = (cachePath, metaPath, remoteURL) => {
             }
         })();
         const currentTime = Date.now();
-
+        let data;
         // if cached copy is not outdated, return cached copy
         if (isFinite(cacheTime) &&
             (currentTime - cacheTime < CACHE_LIFETIME_MILLISEC)
         ) {
-            const data = fileSystem.readFileSync(cachePath, UTF_8);
-            response.send(data);
+            data = fileSystem.readFileSync(cachePath, UTF_8);
         }
 
         // if cached copy is outdated, fetch new copy from remote
         // and update cache timestamp
         else {
-            const newData = await fetch(remoteURL).then(res => res.text());
-            fileSystem.writeFileSync(cachePath, newData);
+            data = await fetch(remoteURL).then(res => res.text());
+            fileSystem.writeFileSync(cachePath, data);
             fileSystem.writeFileSync(metaPath, String(currentTime));
-            response.send(newData);
         }
+        response.setHeader('Content-Length', data.length);
+        response.send(data);
         response.end();
     });
 };
