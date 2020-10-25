@@ -1,0 +1,25 @@
+{
+  "name": "covid-viz",
+  "version": "0.5.0",
+  "description": "graphical visualization of COVID-19 spread",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yunfeim/covid-viz.git"
+  },
+  "author": "Yunfei Ma",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/yunfeim/covid-viz/issues"
+  },
+  "homepage": "https://github.com/yunfeim/covid-viz#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "fs": "0.0.1-security",
+    "node-fetch": "^2.6.1"
+  }
+}
