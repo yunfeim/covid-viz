@@ -49,7 +49,6 @@ const initializeSmartEndpoint = (cachePath, metaPath, remoteURL) => {
             fileSystem.writeFileSync(cachePath, data);
             fileSystem.writeFileSync(metaPath, String(currentTime));
         }
-        response.setHeader('Content-Length', data.length);
         response.setHeader('Content-Type', 'text/plain; charset=UTF-8');
         response.send(data);
         response.end();
