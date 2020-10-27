@@ -13,6 +13,9 @@ const CUMULATIVE_CASES_LOCATION = './data/cumulative_cases.csv';
 const CUMULATIVE_DEATHS_LOCATION = './data/cumulative_deaths.csv';
 const POPULATIONS_LOCATION = './data/county_populations.csv';
 
+const EARLIEST_START_DATE = "2020-01-22";
+const DEFAULT_START_DATE = "2020-03-01";
+
 /* mapping of datasets, calculated on an as-needed basis.
 // also has county populations stored as `populationKey`.
 // each dataset ID consist of two parts as encoded by the `encode` function:
@@ -43,14 +46,14 @@ const maxFlag = getSum([QUANTITY, TYPE, VALUE].map(
 
 /* Retrieve a dataset from the provided identifiers.
 // Return a promise that resolves to the desired dataset */
-const getDataset = async (sourceFlag, trailingAverage = 1) => {
+const getBasicDataset = async (sourceFlag, trailingAverage = 1) => {
     // check that source flag is in bounds
     if (!(0 <= sourceFlag && sourceFlag <= maxFlag)) {
         throw `Unknown flag: ${sourceFlag}`;
     }
-    // check that moving average is positive
+    // check that trailing average is positive
     if (!(trailingAverage > 0)) {
-        throw 'Moving average must be positive';
+        throw 'Trailing average must be positive';
     }
 
     const datasetKey = encode(sourceFlag, trailingAverage);
@@ -60,7 +63,7 @@ const getDataset = async (sourceFlag, trailingAverage = 1) => {
         // 'per capita' dataset: get corresponding total dataset
         // as well as county populations, then process
         if (sourceFlag >= VALUE.perCapita) {
-            const totalDataset = getDataset(
+            const totalDataset = getBasicDataset(
                 sourceFlag - VALUE.perCapita, trailingAverage
             );
 
@@ -82,7 +85,7 @@ const getDataset = async (sourceFlag, trailingAverage = 1) => {
 
         // 'change' dataset: get corresponding cumulative dataset, then process
         else if (sourceFlag >= TYPE.change) {
-            const cumulativeDataset = getDataset(
+            const cumulativeDataset = getBasicDataset(
                 sourceFlag - TYPE.change, trailingAverage
             );
 
@@ -294,6 +297,30 @@ const calculatePerCapitaSeries = (totalSeries, countyPopulations) => {
     return perCapitaSeries;
 };
 
+/* trim the period of a dataset to between startDate and endDate */
+const trimPeriod = (dataset, startDate, endDate) => {
+    const [dates, series] = dataset;
+    let startIndex = 0;
+    for (; startIndex < dates.length; startIndex++) {
+        if (startDate <= dates[startIndex]) {
+            break;
+        }
+    }
+    let endIndex = dates.length - 1;
+    for (; endIndex >= 0; endIndex--) {
+        if (endDate >= dates[endIndex]) {
+            break;
+        }
+    }
+    const arraySlicer = array => array.slice(startIndex, endIndex + 1);
+    const newDates = arraySlicer(dates);
+    const newDataset = {};
+    Object.entries(series).forEach(([code, values]) => {
+        newDataset[code] = arraySlicer(values);
+    });
+    return [newDates, newDataset];
+}
+
 // color the SVG using the provided mapping from FIPS codes to HTML hex codes
 const colorizeMap = (countyElements, colors) => {
     const fallbackColor = 'white';
@@ -405,8 +432,7 @@ const getAnimator = () => {
     /* play an animation using the given time-series object,
     // the given array of dates, the given frame rate (per second),
     // and the given color function */
-    const playAnimation = (dates, caseSeries, populations, frameRate = 10) => {
-
+    const playAnimation = ([dates, caseSeries], populations, frameRate) => {
         const colorSeries = populations ?
             getColors(caseSeries, getHue, populations, getLightness) :
             getColors(caseSeries, getHue);
@@ -532,16 +558,25 @@ const loadInputs = () => {
         buttons[name] = new Button(element);
     });
 
-    const trailingAverage = (() => {
+    const trailingAverageSelector = (() => {
         const input = document.getElementById('trailing-average');
         const display = input.previousElementSibling;
         return new RangeSelector(input, display);
     })();
 
-    return { buttons, rangeSelectors: { trailingAverage } };
+    const speedSelector = (() => {
+        const input = document.getElementById('speed');
+        const display = input.previousElementSibling;
+        return new RangeSelector(input, display);
+    })();
+
+    const startDateSelector = document.getElementById('start-date');
+    const endDateSelector = document.getElementById('end-date');
+
+    return { buttons, rangeSelectors: { trailingAverageSelector, speedSelector }, valueSelectors: { startDateSelector, endDateSelector } };
 }
 
-const initializeButtons = (buttons) => {
+const initializeInputs = ({ buttons, valueSelectors }) => {
     const {
         cases, deaths, cumulative, change, total, perCapita
     } = buttons;
@@ -550,10 +585,25 @@ const initializeButtons = (buttons) => {
     cumulative.setMouseActionWithOpposing(change);
     total.setMouseActionWithOpposing(perCapita);
 
-    // set initial options
+    // set default selection for buttons
     cases.select();
     change.select();
     perCapita.select();
+
+    // set default dates for date selectors
+    const { startDateSelector, endDateSelector } = valueSelectors;
+    startDateSelector.value = DEFAULT_START_DATE;
+    startDateSelector.min = EARLIEST_START_DATE;
+    const currentDate = (() => {
+        const date = new Date();
+        const process = num => String(1 + num).padStart(2, '0');
+        return `${date.getUTCFullYear()
+            }-${process(date.getUTCMonth())
+            }-${process(date.getUTCDate())
+            }`;
+    })();
+    endDateSelector.value = currentDate;
+    endDateSelector.max = currentDate;
 };
 
 /* set up the help icons to display a help dialog */
@@ -582,31 +632,36 @@ const initializeHelpDialogs = async () => {
     }
 };
 
-/* find the identifier for the dataset matching the user's selected options */
-const calculateDatasetIdentifiers = ({ buttons, rangeSelectors }) => {
+/* play the animation matching the user's selected options */
+const playAnimationFromInput = async (
+    { buttons, rangeSelectors, valueSelectors }
+) => {
     const { deaths, change, perCapita } = buttons;
     let sourceFlag = 0;
     sourceFlag += deaths.selected ? QUANTITY.deaths : QUANTITY.cases;
     sourceFlag += change.selected ? TYPE.change : TYPE.cumulative;
     sourceFlag += perCapita.selected ? VALUE.perCapita : VALUE.total;
 
-    const { trailingAverage } = rangeSelectors;
-    return [sourceFlag, trailingAverage.value];
+    const { trailingAverageSelector, speedSelector } = rangeSelectors;
+    const basic = await getBasicDataset(sourceFlag, trailingAverageSelector.value);
+
+    const { startDateSelector, endDateSelector } = valueSelectors;
+    const trimmed = trimPeriod(basic,
+        new Date(startDateSelector.value), new Date(endDateSelector.value));
+
+    const playAnimation = getAnimator();
+    playAnimation(trimmed, undefined, speedSelector.value);
 }
 
 /* main action on page */
 const main = async () => {
-    await loadMap();
-    const { buttons, rangeSelectors } = loadInputs();
-    initializeButtons(buttons);
+    const { buttons, rangeSelectors, valueSelectors } = loadInputs();
+    initializeInputs({ buttons, valueSelectors });
     await initializeHelpDialogs();
-    const playAnimation = getAnimator();
+    await loadMap();
     const playButton = document.getElementById('play-button');
-    playButton.addEventListener('click', async () => {
-        const [sourceFlag, trailingAverage] = calculateDatasetIdentifiers(
-            { buttons, rangeSelectors });
-        const [dates, dataset] = await getDataset(sourceFlag, trailingAverage);
-        playAnimation(dates, dataset);
+    playButton.addEventListener('click', () => {
+        playAnimationFromInput({ buttons, rangeSelectors, valueSelectors });
     });
 };
 

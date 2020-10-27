@@ -58,6 +58,16 @@ h1 {
     background-color: var(--bright-color);
 }
 
+#start-end-input {
+    display: grid;
+    grid-template: 1fr / repeat(2, 1fr);
+}
+
+.date-choice {
+    display: flex;
+    align-items: center;
+}
+
 .binary-choice {
     display: grid;
     grid-template: 1fr / repeat(2, 1fr);
@@ -114,12 +124,12 @@ button {
     background-color: var(--semi-bright-color);
 }
 
-.range-container {
+.range-choice {
     display: grid;
     grid-template: 1fr / repeat(2, min-content) 1fr;
 }
 
-.range-container>span {
+.range-choice>span, .date-choice>span {
     white-space: pre;
     display: inline-flex;
     align-items: center;
