@@ -1,11 +1,21 @@
 // extract a 4 or 5 digit FIPS code from a string
 const FIPS_REGEX = new RegExp('(?<fips>\\d{4,5})$');
 
-// ID of map object in HTML
-const MAP_ID = 'map';
-
-// ID of date box in HTML
-const DATE_DISPLAY_ID = 'date-display';
+// ID's of HTML elements and useful attributes
+const HTML_IDS = {
+    MAP: 'map',
+    DATE_DISPLAY: 'date-display',
+    TRAILING_AVERAGE: 'trailing-average',
+    START_DATE: 'start-date',
+    END_DATE: 'end-date',
+    SPEED: 'speed',
+    HELP_SYSTEM: 'help-system',
+    OPTIONS_CONTAINER: 'options-container',
+    PLAY_BUTTON: 'play-button'
+}
+const HTML_ATTRS = {
+    DATA_HELP: 'data-help'
+}
 
 // locations of resources
 const MAP_LOCATION = './usa_counties.svg';
@@ -189,8 +199,8 @@ const loadMap = async () => {
         const parser = new DOMParser();
         const XMLTree = parser.parseFromString(raw, "image/svg+xml");
         const asNode = document.adoptNode(XMLTree.querySelector('svg'));
-        document.getElementById(MAP_ID).replaceWith(asNode);
-        asNode.id = MAP_ID;
+        document.getElementById(HTML_IDS.MAP).replaceWith(asNode);
+        asNode.id = HTML_IDS.MAP;
     });
 }
 
@@ -438,8 +448,8 @@ const getAnimator = () => {
             getColors(caseSeries, getHue);
         const millisBetweenFrames = 1000 / frameRate;
 
-        const countyNodes = getCountyNodes(document.getElementById(MAP_ID));
-        const dateElem = document.getElementById(DATE_DISPLAY_ID);
+        const countyNodes = getCountyNodes(document.getElementById(HTML_IDS.MAP));
+        const dateElem = document.getElementById(HTML_IDS.DATE_DISPLAY);
         const dateStrings = dates.map(formatDate);
 
         // set current task as running
@@ -559,19 +569,19 @@ const loadInputs = () => {
     });
 
     const trailingAverageSelector = (() => {
-        const input = document.getElementById('trailing-average');
+        const input = document.getElementById(HTML_IDS.TRAILING_AVERAGE);
         const display = input.previousElementSibling;
         return new RangeSelector(input, display);
     })();
 
     const speedSelector = (() => {
-        const input = document.getElementById('speed');
+        const input = document.getElementById(HTML_IDS.SPEED);
         const display = input.previousElementSibling;
         return new RangeSelector(input, display);
     })();
 
-    const startDateSelector = document.getElementById('start-date');
-    const endDateSelector = document.getElementById('end-date');
+    const startDateSelector = document.getElementById(HTML_IDS.START_DATE);
+    const endDateSelector = document.getElementById(HTML_IDS.END_DATE);
 
     return { buttons, rangeSelectors: { trailingAverageSelector, speedSelector }, valueSelectors: { startDateSelector, endDateSelector } };
 }
@@ -608,7 +618,7 @@ const initializeInputs = ({ buttons, valueSelectors }) => {
 
 /* set up the help icons to display a help dialog */
 const initializeHelpDialogs = async () => {
-    const helpSystem = document.getElementById('help-system').content;
+    const helpSystem = document.getElementById(HTML_IDS.HELP_SYSTEM).content;
     const helpSVG = await fetch('./question-mark.svg')
         .then(res => res.text()).then(raw => {
             const parser = new DOMParser();
@@ -616,15 +626,15 @@ const initializeHelpDialogs = async () => {
                 .querySelector('svg');
         });
 
-    const optionsContainer = document.getElementById('options-container');
+    const optionsContainer = document.getElementById(HTML_IDS.OPTIONS_CONTAINER);
     for (const option of optionsContainer.children) {
-        if (option.hasAttribute('data-help')) {
+        if (option.hasAttribute(HTML_ATTRS.DATA_HELP)) {
             const [helpButton, helpDialog] = helpSystem
                 .cloneNode(true).children;
             option.append(helpButton, helpDialog);
             const icon = document.adoptNode(helpSVG.cloneNode(true));
             helpButton.querySelector('svg').replaceWith(icon);
-            helpDialog.textContent = option.getAttribute('data-help');
+            helpDialog.textContent = option.getAttribute(HTML_ATTRS.DATA_HELP);
             helpButton.addEventListener('click', () => {
                 helpDialog.hidden = !helpDialog.hidden;
             });
@@ -659,7 +669,7 @@ const main = async () => {
     initializeInputs({ buttons, valueSelectors });
     await initializeHelpDialogs();
     await loadMap();
-    const playButton = document.getElementById('play-button');
+    const playButton = document.getElementById(HTML_IDS.PLAY_BUTTON);
     playButton.addEventListener('click', () => {
         playAnimationFromInput({ buttons, rangeSelectors, valueSelectors });
     });
