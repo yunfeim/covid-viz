@@ -608,10 +608,10 @@ const initializeInputs = ({ buttons, valueSelectors }) => {
     startDateSelector.min = EARLIEST_START_DATE;
     const currentDate = (() => {
         const date = new Date();
-        const process = num => String(1 + num).padStart(2, '0');
+        const process = num => String(num).padStart(2, '0');
         return `${date.getUTCFullYear()
-            }-${process(date.getUTCMonth())
-            }-${process(date.getUTCDate())
+            }-${process(1 + date.getUTCMonth()) // 0-indexed
+            }-${process(date.getUTCDate()) // 1-indexed
             }`;
     })();
     endDateSelector.value = currentDate;
