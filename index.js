@@ -335,7 +335,9 @@ const trimPeriod = (dataset, startDate, endDate) => {
 const colorizeMap = (countyElements, colors) => {
     const fallbackColor = 'white';
     Object.entries(countyElements).forEach(([code, mapNode]) => {
-        const color = colors.hasOwnProperty(code) ? colors[code] : fallbackColor;
+        const color = colors.hasOwnProperty(code) ?
+            colors[code] :
+            fallbackColor;
         mapNode.style.fill = color;
     });
 };

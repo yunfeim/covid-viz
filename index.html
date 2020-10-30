@@ -2,7 +2,8 @@
 <html>
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
     <title>COVID-19 Visualizer</title>
     <script src="index.js" defer></script>
     <link href="index.css" rel="stylesheet" />
@@ -30,11 +31,6 @@
                 <button>Total</button>
                 <button>Per Capita</button>
             </article>
-            <article class="range-choice">
-                <span>Trailing average (days): </span>
-                <span></span>
-                <input id="trailing-average" type="range" min="1" max="28" step="1" value="14" />
-            </article>
             <article id="start-end-input">
                 <div class="date-choice">
                     <span>Start date: </span>
@@ -44,6 +40,11 @@
                     <span>End date: </span>
                     <input id="end-date" type="date" />
                 </div>
+            </article>
+            <article class="range-choice">
+                <span>Trailing average (days): </span>
+                <span></span>
+                <input id="trailing-average" type="range" min="1" max="28" step="1" value="14" />
             </article>
             <article class="range-choice">
                 <span>Speed (fps): </span>
@@ -56,6 +57,7 @@
             <div id="date-display"></div>
             <svg id="map"></svg>
         </section>
+        <div id="attribution">Case and death statistics updated daily from <a href="https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/">USAFacts.org</a> (CC BY-SA 4.0)</div>
     </main>
 </body>
 

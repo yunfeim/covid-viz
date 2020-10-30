@@ -3,6 +3,7 @@ const fetch = require('node-fetch');
 const fileSystem = require('fs');
 
 const SERVER = serverCreator();
+const PORT = 8888;
 
 const CUMULATIVE_CASES_REMOTE = 'https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_confirmed_usafacts.csv';
 const CUMULATIVE_CASES_CACHE = 'data/cumulative_cases.csv';
@@ -45,6 +46,7 @@ const initializeSmartEndpoint = (cachePath, metaPath, remoteURL) => {
         // if cached copy is outdated, fetch new copy from remote
         // and update cache timestamp
         else {
+            console.log(`Fetching new data [${new Date()}]`);
             data = await fetch(remoteURL).then(res => res.text());
             fileSystem.writeFileSync(cachePath, data);
             fileSystem.writeFileSync(metaPath, String(currentTime));
@@ -62,4 +64,4 @@ initializeSmartEndpoint(CUMULATIVE_DEATHS_CACHE, CUMULATIVE_DEATHS_META,
 initializeSmartEndpoint(COUNTY_POPULATIONS_CACHE, COUNTY_POPULATIONS_META,
     COUNTY_POPULATIONS_REMOTE);
 
-SERVER.listen(8888, () => { console.log('Server listening') });
+SERVER.listen(PORT, () => console.log(`Server listening on ${PORT}`));
