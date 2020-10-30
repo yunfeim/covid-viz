@@ -5,6 +5,8 @@ const fileSystem = require('fs');
 const SERVER = serverCreator();
 const PORT = 8888;
 
+const LOG_LOC = 'data/log.txt';
+
 const CUMULATIVE_CASES_REMOTE = 'https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_confirmed_usafacts.csv';
 const CUMULATIVE_CASES_CACHE = 'data/cumulative_cases.csv';
 const CUMULATIVE_CASES_META = 'data/cumulative_cases_timestamp.json';
@@ -46,7 +48,9 @@ const initializeSmartEndpoint = (cachePath, metaPath, remoteURL) => {
         // if cached copy is outdated, fetch new copy from remote
         // and update cache timestamp
         else {
-            console.log(`Fetching new data [${new Date()}]`);
+            const logMessage = `[${new Date()}] Fetching from ${remoteURL}`;
+            console.log(logMessage);
+            fileSystem.appendFileSync(LOG_LOC, logMessage);
             data = await fetch(remoteURL).then(res => res.text());
             fileSystem.writeFileSync(cachePath, data);
             fileSystem.writeFileSync(metaPath, String(currentTime));
@@ -57,6 +61,7 @@ const initializeSmartEndpoint = (cachePath, metaPath, remoteURL) => {
     });
 };
 
+// set up dataset endpoints
 initializeSmartEndpoint(CUMULATIVE_CASES_CACHE, CUMULATIVE_CASES_META,
     CUMULATIVE_CASES_REMOTE);
 initializeSmartEndpoint(CUMULATIVE_DEATHS_CACHE, CUMULATIVE_DEATHS_META,
@@ -64,4 +69,11 @@ initializeSmartEndpoint(CUMULATIVE_DEATHS_CACHE, CUMULATIVE_DEATHS_META,
 initializeSmartEndpoint(COUNTY_POPULATIONS_CACHE, COUNTY_POPULATIONS_META,
     COUNTY_POPULATIONS_REMOTE);
 
-SERVER.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+// protect data fetch logs
+SERVER.get(`/${LOG_LOC}`, (req, res) => res.send(403).end());
+
+SERVER.listen(PORT, () => {
+    const startMessage = `[${new Date()}] Server listening on ${PORT}`;
+    console.log(startMessage);
+    fileSystem.appendFileSync(LOG_LOC, startMessage);
+});
