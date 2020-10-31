@@ -176,6 +176,7 @@ button {
 
 #github-link {
     display: block;
+    background-color: var(--plain-color);
     margin: 2rem auto;
     width: max-content;
     font-size: 1rem;
@@ -186,6 +187,7 @@ button {
 #github-link>a {
     text-decoration: none;
     color: black;
+    cursor: default;
 }
 
 #github-link:hover {

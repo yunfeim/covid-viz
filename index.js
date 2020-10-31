@@ -848,6 +848,13 @@ const initializeHelpDialogs = async () => {
     }
 };
 
+// make entire element around Github link serve as a link
+const initializeGithubLink = () => {
+    const wrapperButton = document.getElementById('github-link');
+    const linkLoc = wrapperButton.querySelector('a').href;
+    wrapperButton.addEventListener('click', () => window.location = linkLoc);
+};
+
 /* main action on page */
 const main = async () => {
     await initializeHelpDialogs();
@@ -855,6 +862,7 @@ const main = async () => {
     const { buttons, rangeSelectors, valueSelectors } = loadInputs();
     const startStopButton = document.getElementById(HTML_IDS.START_STOP);
     new UI(startStopButton, { buttons, rangeSelectors, valueSelectors });
+    initializeGithubLink();
 };
 
 main();
