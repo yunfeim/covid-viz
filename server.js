@@ -23,7 +23,13 @@ const COUNTY_POPULATIONS_META = 'data/county_populations_timestamp.json';
 // currently 24 hours
 const CACHE_LIFETIME_MILLISEC = 1000 * 60 * 60 * 24;
 
-const initializeSmartEndpoint = (cachePath, metaPath, remoteURL) => {
+// write a message to the log file at `LOG_LOC`
+const writeToLog = (message) => {
+    fileSystem.appendFileSync(LOG_LOC, `${message}\n`);
+}
+
+// set up endpoint for data file that is cached as well as updated
+const initializeDataEndpoint = (cachePath, metaPath, remoteURL) => {
     const UTF_8 = 'utf-8';
 
     SERVER.get(`/${cachePath}`, async (request, response) => {
@@ -50,7 +56,7 @@ const initializeSmartEndpoint = (cachePath, metaPath, remoteURL) => {
         else {
             const logMessage = `[${new Date()}] Fetching from ${remoteURL}`;
             console.log(logMessage);
-            fileSystem.appendFileSync(LOG_LOC, logMessage);
+            writeToLog(logMessage);
             data = await fetch(remoteURL).then(res => res.text());
             fileSystem.writeFileSync(cachePath, data);
             fileSystem.writeFileSync(metaPath, String(currentTime));
@@ -62,11 +68,11 @@ const initializeSmartEndpoint = (cachePath, metaPath, remoteURL) => {
 };
 
 // set up dataset endpoints
-initializeSmartEndpoint(CUMULATIVE_CASES_CACHE, CUMULATIVE_CASES_META,
+initializeDataEndpoint(CUMULATIVE_CASES_CACHE, CUMULATIVE_CASES_META,
     CUMULATIVE_CASES_REMOTE);
-initializeSmartEndpoint(CUMULATIVE_DEATHS_CACHE, CUMULATIVE_DEATHS_META,
+initializeDataEndpoint(CUMULATIVE_DEATHS_CACHE, CUMULATIVE_DEATHS_META,
     CUMULATIVE_DEATHS_REMOTE);
-initializeSmartEndpoint(COUNTY_POPULATIONS_CACHE, COUNTY_POPULATIONS_META,
+initializeDataEndpoint(COUNTY_POPULATIONS_CACHE, COUNTY_POPULATIONS_META,
     COUNTY_POPULATIONS_REMOTE);
 
 // protect data fetch logs
@@ -75,5 +81,5 @@ SERVER.get(`/${LOG_LOC}`, (req, res) => res.send(403).end());
 SERVER.listen(PORT, () => {
     const startMessage = `[${new Date()}] Server listening on ${PORT}`;
     console.log(startMessage);
-    fileSystem.appendFileSync(LOG_LOC, startMessage);
+    writeToLog(startMessage);
 });
