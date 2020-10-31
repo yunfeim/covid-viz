@@ -31,7 +31,7 @@
                 <button>Total</button>
                 <button>Per Capita</button>
             </article>
-            <article id="start-end-input">
+            <article id="period-input">
                 <div class="date-choice">
                     <span>Start date: </span>
                     <input id="start-date" type="date" />
@@ -44,15 +44,19 @@
             <article class="range-choice">
                 <span>Trailing average (days): </span>
                 <span></span>
-                <input id="trailing-average" type="range" min="1" max="28" step="1" value="14" />
+                <div class="input-wrapper">
+                    <input id="trailing-average" type="range" min="1" max="28" step="1" value="14" />
+                </div>
             </article>
             <article class="range-choice">
                 <span>Speed (fps): </span>
                 <span></span>
-                <input id="speed" type="range" min="1" max="20" step="1" value="10" />
+                <div class="input-wrapper">
+                    <input id="speed" type="range" min="1" max="20" step="1" value="10" />
+                </div>
             </article>
         </section>
-        <button id="play-button">Play</button>
+        <button id="start-stop"></button>
         <section id="viz-container">
             <div id="date-display"></div>
             <svg id="map"></svg>

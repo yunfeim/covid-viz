@@ -11,11 +11,14 @@ const HTML_IDS = {
     SPEED: 'speed',
     HELP_SYSTEM: 'help-system',
     OPTIONS_CONTAINER: 'options-container',
-    PLAY_BUTTON: 'play-button'
+    START_STOP: 'start-stop'
 }
 const HTML_ATTRS = {
     DATA_HELP: 'data-help',
     HEIGHT: 'height'
+}
+const EVENTS = {
+    CLICK: 'click'
 }
 
 // locations of resources
@@ -450,18 +453,20 @@ const formatDate = (date) => {
 // ensures that only one animation is active at any time */
 const getAnimator = () => {
     // ID of the current task to ensure only one task is active at any time
-    let current_task;
+    let current_task = null;
 
     /* play an animation using the given time-series object,
     // the given array of dates, the given frame rate (per second),
     // and the given color function */
-    const playAnimation = ([dates, caseSeries], populations, frameRate) => {
+    const startAnimation = ([dates, caseSeries], populations,
+        frameRate, onFinished) => {
         const colorSeries = populations ?
             getColors(caseSeries, getHue, populations, getLightness) :
             getColors(caseSeries, getHue);
         const millisBetweenFrames = 1000 / frameRate;
 
-        const countyNodes = getCountyNodes(document.getElementById(HTML_IDS.MAP));
+        const countyNodes = getCountyNodes(
+            document.getElementById(HTML_IDS.MAP));
         const dateElem = document.getElementById(HTML_IDS.DATE_DISPLAY);
         const dateStrings = dates.map(formatDate);
 
@@ -490,30 +495,55 @@ const getAnimator = () => {
                     () => loadFrame(nextFrameNum),
                     millisBetweenFrames);
             }
+            else {
+                onFinished();
+            }
         };
         loadFrame(0);
     };
 
-    return playAnimation;
+    const stopAnimation = () => {
+        current_task = null;
+    };
+
+    return { startAnimation, stopAnimation }
 }
 
-class Button {
-    selectedClass = 'selected';
-    spotlightedClass = 'spotlighted';
-    overshadowedClass = 'overshadowed';
+/* abstract class for an input that can be disabled */
+class Toggable {
+    DISABLED = 'disabled';
+    constructor() {
+        this.isDisabled = false;
+    }
+
+    disable() {
+        this.isDisabled = true;
+    }
+
+    enable() {
+        this.isDisabled = false;
+    }
+};
+
+/* class representing buttons that come in opposing pairs */
+class Button extends Toggable {
+    SELECTED = 'selected';
+    SPOTLIGHTED = 'spotlighted';
+    OVERSHADOWED = 'overshadowed';
 
     constructor(element) {
+        super();
         this.element = element;
         this.isSelected = false;
     }
 
     select() {
-        this.element.classList.toggle(this.selectedClass, true);
+        this.element.classList.add(this.SELECTED);
         this.isSelected = true;
     }
 
     deselect() {
-        this.element.classList.toggle(this.selectedClass, false);
+        this.element.classList.remove(this.SELECTED);
         this.isSelected = false;
     }
 
@@ -522,50 +552,115 @@ class Button {
     }
 
     setMouseActionWithOpposing(opposing) {
-        this.element.addEventListener('click', () => {
-            this.select();
-            opposing.deselect();
+        this.element.addEventListener(EVENTS.CLICK, () => {
+            if (!this.isDisabled) {
+                this.select();
+                opposing.deselect();
+            }
         });
-        opposing.element.addEventListener('click', () => {
-            opposing.select();
-            this.deselect();
+        opposing.element.addEventListener(EVENTS.CLICK, () => {
+            if (!this.isDisabled) {
+                opposing.select();
+                this.deselect();
+            }
         });
         this.element.addEventListener('mouseenter', () => {
-            this.element.classList.toggle(this.spotlightedClass, true);
-            opposing.element.classList.toggle(this.overshadowedClass, true);
+            if (!this.isDisabled) {
+                this.element.classList.add(this.SPOTLIGHTED);
+                opposing.element.classList.add(this.OVERSHADOWED);
+            }
         });
 
         this.element.addEventListener('mouseleave', () => {
-            this.element.classList.toggle(this.spotlightedClass, false);
-            opposing.element.classList.toggle(this.overshadowedClass, false);
+            if (!this.isDisabled) {
+                this.element.classList.remove(this.SPOTLIGHTED);
+                opposing.element.classList.remove(this.OVERSHADOWED);
+            }
         });
 
         opposing.element.addEventListener('mouseenter', () => {
-            opposing.element.classList.toggle(this.spotlightedClass, true);
-            this.element.classList.toggle(this.overshadowedClass, true);
+            if (!this.isDisabled) {
+                opposing.element.classList.toggle(this.SPOTLIGHTED, true);
+                this.element.classList.toggle(this.OVERSHADOWED, true);
+            }
         });
 
         opposing.element.addEventListener('mouseleave', () => {
-            opposing.element.classList.toggle(this.spotlightedClass, false);
-            this.element.classList.toggle(this.overshadowedClass, false);
+            if (!this.isDisabled) {
+                opposing.element.classList.toggle(this.SPOTLIGHTED, false);
+                this.element.classList.toggle(this.OVERSHADOWED, false);
+            }
         });
+    }
+
+    disable() {
+        super.disable();
+        this.element.classList.add(this.DISABLED);
+    }
+
+    enable() {
+        super.enable();
+        this.element.classList.remove(this.DISABLED);
     }
 }
 
-class RangeSelector {
-    constructor(input, display) {
+/* class representing range inputs and their display */
+class RangeSelector extends Toggable {
+    constructor(input) {
+        super();
         this.input = input;
-        this.display = display;
+        this.inputWrapper = this.input.parentElement;
+        this.display = this.inputWrapper.previousElementSibling;
 
         this.display.textContent = this.input.value;
 
         this.input.addEventListener('input', () => {
-            this.display.textContent = this.input.value;
+            if (!this.isDisabled) {
+                this.display.textContent = this.input.value;
+            }
         });
     }
 
     get value() {
         return this.input.value;
+    }
+
+    disable() {
+        super.disable();
+        this.input.toggleAttribute(this.DISABLED, true);
+        this.inputWrapper.classList.add(this.DISABLED);
+    }
+
+    enable() {
+        super.enable();
+        this.input.toggleAttribute(this.DISABLED, false);
+        this.inputWrapper.classList.remove(this.DISABLED);
+    }
+};
+
+/* wrapper class for HTML input elements */
+class ValueSelector extends Toggable {
+    constructor(element) {
+        super();
+        this.element = element;
+    }
+
+    get underlying() {
+        return this.element;
+    }
+
+    get value() {
+        return this.element.value;
+    }
+
+    disable() {
+        super.disable();
+        this.element.toggleAttribute(this.DISABLED, true);
+    }
+
+    enable() {
+        super.enable();
+        this.element.toggleAttribute(this.DISABLED, false);
     }
 };
 
@@ -583,51 +678,148 @@ const loadInputs = () => {
 
     const trailingAverageSelector = (() => {
         const input = document.getElementById(HTML_IDS.TRAILING_AVERAGE);
-        const display = input.previousElementSibling;
-        return new RangeSelector(input, display);
+        return new RangeSelector(input);
     })();
 
     const speedSelector = (() => {
         const input = document.getElementById(HTML_IDS.SPEED);
-        const display = input.previousElementSibling;
-        return new RangeSelector(input, display);
+        return new RangeSelector(input);
     })();
 
-    const startDateSelector = document.getElementById(HTML_IDS.START_DATE);
-    const endDateSelector = document.getElementById(HTML_IDS.END_DATE);
+    const startDateSelector = new ValueSelector(
+        document.getElementById(HTML_IDS.START_DATE));
+    const endDateSelector = new ValueSelector(
+        document.getElementById(HTML_IDS.END_DATE));
 
-    return { buttons, rangeSelectors: { trailingAverageSelector, speedSelector }, valueSelectors: { startDateSelector, endDateSelector } };
+    return {
+        buttons,
+        rangeSelectors: { trailingAverageSelector, speedSelector },
+        valueSelectors: { startDateSelector, endDateSelector }
+    };
 }
 
-const initializeInputs = ({ buttons, valueSelectors }) => {
-    const {
-        cases, deaths, cumulative, change, total, perCapita
-    } = buttons;
 
-    cases.setMouseActionWithOpposing(deaths);
-    cumulative.setMouseActionWithOpposing(change);
-    total.setMouseActionWithOpposing(perCapita);
+class UI {
+    START_STOP_BUTTON_TEXT = {
+        START: 'Start',
+        STOP: 'Stop',
+        LOADING: 'Loading...'
+    };
 
-    // set default selection for buttons
-    cases.select();
-    change.select();
-    perCapita.select();
+    START_STOP_BUTTON_CLASSES = {
+        STARTED: 'started',
+        STOPPED: 'stopped',
+        LOADING: 'loading'
+    }
 
-    // set default dates for date selectors
-    const { startDateSelector, endDateSelector } = valueSelectors;
-    startDateSelector.value = DEFAULT_START_DATE;
-    startDateSelector.min = EARLIEST_START_DATE;
-    const currentDate = (() => {
-        const date = new Date();
-        const process = num => String(num).padStart(2, '0');
-        return `${date.getUTCFullYear()
-            }-${process(1 + date.getUTCMonth()) // 0-indexed
-            }-${process(date.getUTCDate()) // 1-indexed
-            }`;
-    })();
-    endDateSelector.value = currentDate;
-    endDateSelector.max = currentDate;
-};
+    constructor(startStopButton, { buttons, rangeSelectors, valueSelectors }) {
+        this.startStopButton = startStopButton;
+        this.buttons = buttons;
+        this.rangeSelectors = rangeSelectors;
+        this.valueSelectors = valueSelectors;
+
+        this.initializeInputs();
+        startStopButton.textContent = this.START_STOP_BUTTON_TEXT.START;
+        this.markAnimationStopped();
+        startStopButton.addEventListener(
+            EVENTS.CLICK, () => this.playAnimationFromInput(), { once: true });
+    };
+
+    initializeInputs() {
+        const {
+            cases, deaths, cumulative, change, total, perCapita
+        } = this.buttons;
+
+        cases.setMouseActionWithOpposing(deaths);
+        cumulative.setMouseActionWithOpposing(change);
+        total.setMouseActionWithOpposing(perCapita);
+
+        // set default selection for buttons
+        cases.select();
+        change.select();
+        perCapita.select();
+
+        // set default dates for date selectors
+        const { startDateSelector, endDateSelector } = this.valueSelectors;
+        startDateSelector.underlying.value = DEFAULT_START_DATE;
+        startDateSelector.underlying.min = EARLIEST_START_DATE;
+        const currentDate = (() => {
+            const date = new Date();
+            const process = num => String(num).padStart(2, '0');
+            return `${date.getUTCFullYear()
+                }-${process(1 + date.getUTCMonth()) // 0-indexed
+                }-${process(date.getUTCDate()) // 1-indexed
+                }`;
+        })();
+        endDateSelector.underlying.value = currentDate;
+        endDateSelector.underlying.max = currentDate;
+    };
+
+    markAnimationLoading() {
+        this.startStopButton.textContent = this.START_STOP_BUTTON_TEXT.LOADING;
+        this.startStopButton.classList.remove(
+            this.START_STOP_BUTTON_CLASSES.STOPPED);
+        this.startStopButton.classList.add(
+            this.START_STOP_BUTTON_CLASSES.LOADING);
+    }
+
+    markAnimationStarted() {
+        Object.values(this.buttons).forEach(button => button.disable());
+        Object.values(this.rangeSelectors).forEach(
+            selector => selector.disable());
+        Object.values(this.valueSelectors).forEach(
+            selector => selector.disable());
+        this.startStopButton.textContent = this.START_STOP_BUTTON_TEXT.STOP;
+        this.startStopButton.classList.remove(
+            this.START_STOP_BUTTON_CLASSES.LOADING);
+        this.startStopButton.classList.add(
+            this.START_STOP_BUTTON_CLASSES.STARTED);
+    }
+
+    markAnimationStopped() {
+        Object.values(this.buttons).forEach(button => button.enable());
+        Object.values(this.rangeSelectors).forEach(
+            selector => selector.enable());
+        Object.values(this.valueSelectors).forEach(
+            selector => selector.enable());
+        this.startStopButton.textContent = this.START_STOP_BUTTON_TEXT.START;
+        this.startStopButton.classList.remove(
+            this.START_STOP_BUTTON_CLASSES.STARTED);
+        this.startStopButton.classList.add(
+            this.START_STOP_BUTTON_CLASSES.STOPPED);
+    }
+
+    /* play the animation matching the user's selected options */
+    async playAnimationFromInput() {
+        const { deaths, change, perCapita } = this.buttons;
+        let sourceFlag = 0;
+        sourceFlag += deaths.selected ? QUANTITY.deaths : QUANTITY.cases;
+        sourceFlag += change.selected ? TYPE.change : TYPE.cumulative;
+        sourceFlag += perCapita.selected ? VALUE.perCapita : VALUE.total;
+
+        this.startStopButton.textContent = this.START_STOP_BUTTON_TEXT.LOADING;
+        const { trailingAverageSelector, speedSelector } = this.rangeSelectors;
+        const basic = await getBasicDataset(
+            sourceFlag, trailingAverageSelector.value);
+
+        const { startDateSelector, endDateSelector } = this.valueSelectors;
+        const trimmed = trimPeriod(basic,
+            new Date(startDateSelector.value), new Date(endDateSelector.value));
+
+        const { startAnimation, stopAnimation } = getAnimator();
+        this.markAnimationLoading();
+        startAnimation(trimmed, undefined,
+            speedSelector.value, () => this.markAnimationStopped());
+        this.markAnimationStarted();
+        this.startStopButton.addEventListener(EVENTS.CLICK, () => {
+            stopAnimation();
+            this.markAnimationStopped();
+            this.startStopButton.addEventListener(EVENTS.CLICK, () => {
+                this.playAnimationFromInput();
+            }, { once: true });
+        }, { once: true });
+    }
+}
 
 /* set up the help icons to display a help dialog */
 const initializeHelpDialogs = async () => {
@@ -639,7 +831,8 @@ const initializeHelpDialogs = async () => {
                 .querySelector('svg');
         });
 
-    const optionsContainer = document.getElementById(HTML_IDS.OPTIONS_CONTAINER);
+    const optionsContainer = document.getElementById(
+        HTML_IDS.OPTIONS_CONTAINER);
     for (const option of optionsContainer.children) {
         if (option.hasAttribute(HTML_ATTRS.DATA_HELP)) {
             const [helpButton, helpDialog] = helpSystem
@@ -648,44 +841,20 @@ const initializeHelpDialogs = async () => {
             const icon = document.adoptNode(helpSVG.cloneNode(true));
             helpButton.querySelector('svg').replaceWith(icon);
             helpDialog.textContent = option.getAttribute(HTML_ATTRS.DATA_HELP);
-            helpButton.addEventListener('click', () => {
+            helpButton.addEventListener(EVENTS.CLICK, () => {
                 helpDialog.hidden = !helpDialog.hidden;
             });
         }
     }
 };
 
-/* play the animation matching the user's selected options */
-const playAnimationFromInput = async (
-    { buttons, rangeSelectors, valueSelectors }
-) => {
-    const { deaths, change, perCapita } = buttons;
-    let sourceFlag = 0;
-    sourceFlag += deaths.selected ? QUANTITY.deaths : QUANTITY.cases;
-    sourceFlag += change.selected ? TYPE.change : TYPE.cumulative;
-    sourceFlag += perCapita.selected ? VALUE.perCapita : VALUE.total;
-
-    const { trailingAverageSelector, speedSelector } = rangeSelectors;
-    const basic = await getBasicDataset(sourceFlag, trailingAverageSelector.value);
-
-    const { startDateSelector, endDateSelector } = valueSelectors;
-    const trimmed = trimPeriod(basic,
-        new Date(startDateSelector.value), new Date(endDateSelector.value));
-
-    const playAnimation = getAnimator();
-    playAnimation(trimmed, undefined, speedSelector.value);
-}
-
 /* main action on page */
 const main = async () => {
-    const { buttons, rangeSelectors, valueSelectors } = loadInputs();
-    initializeInputs({ buttons, valueSelectors });
     await initializeHelpDialogs();
     await loadMap();
-    const playButton = document.getElementById(HTML_IDS.PLAY_BUTTON);
-    playButton.addEventListener('click', () => {
-        playAnimationFromInput({ buttons, rangeSelectors, valueSelectors });
-    });
+    const { buttons, rangeSelectors, valueSelectors } = loadInputs();
+    const startStopButton = document.getElementById(HTML_IDS.START_STOP);
+    new UI(startStopButton, { buttons, rangeSelectors, valueSelectors });
 };
 
 main();

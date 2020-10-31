@@ -1,5 +1,6 @@
 :root {
     --plain-color: #F0F0F0;
+    --dark-plain-color: #808080;
     --semi-bright-color: #FFDD44;
     --bright-color: #FFAA22;
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
@@ -9,6 +10,7 @@ body {
     max-width: 80ch;
     margin: 0 auto;
     margin-block-end: 4rem;
+    cursor: default;
 }
 
 @media screen and (max-width: 80ch) {
@@ -51,7 +53,7 @@ h1 {
     grid-template: var(--first-line-height) min-content / repeat(2, 1fr) 2ch;
 }
 
-#play-button {
+#start-stop {
     margin: 1em 0;
     display: flex;
     align-items: center;
@@ -59,13 +61,19 @@ h1 {
     font-size: 2em;
     border-radius: 1ch;
     background-color: var(--plain-color);
+    --start-hover: hsl(70, 100%, 60%);
+    --stop-hover: hsl(20, 100%, 60%);
 }
 
-#play-button:hover {
-    background-color: var(--bright-color);
+#start-stop.started:hover {
+    background-color: var(--stop-hover);
 }
 
-#start-end-input {
+#start-stop.stopped:hover {
+    background-color: var(--start-hover);
+}
+
+#period-input {
     display: grid;
     grid-template: 1fr / repeat(2, 1fr);
 }
@@ -118,17 +126,21 @@ button {
     border-radius: 0 1ch 1ch 0;
 }
 
-.binary-choice>button:hover {
-    cursor: default;
+.binary-choice>button:hover:not(.disabled) {
+    cursor: pointer;
     background-color: var(--bright-color);
 }
 
-.binary-choice>button.selected:not(.overshadowed) {
+.binary-choice>button.selected:not(.overshadowed):not(.disabled) {
     background-color: var(--bright-color);
 }
 
-.binary-choice>button.selected.overshadowed {
+.binary-choice>button.selected.overshadowed:not(.disabled) {
     background-color: var(--semi-bright-color);
+}
+
+.binary-choice>button.selected.disabled {
+    background-color: var(--dark-plain-color);
 }
 
 .range-choice {
@@ -140,6 +152,21 @@ button {
     white-space: pre;
     display: inline-flex;
     align-items: center;
+}
+
+.range-choice>.input-wrapper {
+    border-radius: 1rem;
+    padding: 0 1ch;
+    display: flex;
+    align-items: center;
+}
+
+.range-choice>.input-wrapper.disabled {
+    background-color: var(--plain-color);
+}
+
+.range-choice>.input-wrapper>input {
+    width: 100%;
 }
 
 #attribution {
