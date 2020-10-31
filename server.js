@@ -2,7 +2,7 @@ const serverCreator = require('express');
 const fetch = require('node-fetch');
 const fileSystem = require('fs');
 
-const SERVER = serverCreator();
+const PROXY = serverCreator();
 const PORT = 8888;
 
 const LOG_LOC = 'data/log.txt';
@@ -28,11 +28,11 @@ const writeToLog = (message) => {
     fileSystem.appendFileSync(LOG_LOC, `${message}\n`);
 }
 
-// set up endpoint for data file that is cached as well as updated
+// function to set up endpoint for data file that is cached as well as updated
 const initializeDataEndpoint = (cachePath, metaPath, remoteURL) => {
     const UTF_8 = 'utf-8';
 
-    SERVER.get(`/${cachePath}`, async (request, response) => {
+    PROXY.get(`/${cachePath}`, async (request, response) => {
         // find timestamp of cached file
         const cacheTime = (() => {
             try {
@@ -75,10 +75,21 @@ initializeDataEndpoint(CUMULATIVE_DEATHS_CACHE, CUMULATIVE_DEATHS_META,
 initializeDataEndpoint(COUNTY_POPULATIONS_CACHE, COUNTY_POPULATIONS_META,
     COUNTY_POPULATIONS_REMOTE);
 
-// protect data fetch logs
-SERVER.get(`/${LOG_LOC}`, (req, res) => res.send(403).end());
+// function to block external access to the provided path by returning a 403
+const blockEndpoint = (path) => {
+    PROXY.get(`/${path}`, (req, res) => res.send(403).end());
+};
 
-SERVER.listen(PORT, () => {
+// block access to auxiliary files
+[CUMULATIVE_CASES_CACHE, CUMULATIVE_CASES_META,
+    CUMULATIVE_DEATHS_CACHE, CUMULATIVE_DEATHS_META,
+    COUNTY_POPULATIONS_CACHE, COUNTY_POPULATIONS_META].forEach(
+        path => blockEndpoint(path));
+
+// block access to server logs
+blockEndpoint(LOG_LOC);
+
+PROXY.listen(PORT, () => {
     const startMessage = `[${new Date()}] Server listening on ${PORT}`;
     console.log(startMessage);
     writeToLog(startMessage);
