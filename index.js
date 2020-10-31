@@ -14,7 +14,8 @@ const HTML_IDS = {
     PLAY_BUTTON: 'play-button'
 }
 const HTML_ATTRS = {
-    DATA_HELP: 'data-help'
+    DATA_HELP: 'data-help',
+    HEIGHT: 'height'
 }
 
 // locations of resources
@@ -201,6 +202,16 @@ const loadMap = async () => {
         const asNode = document.adoptNode(XMLTree.querySelector('svg'));
         document.getElementById(HTML_IDS.MAP).replaceWith(asNode);
         asNode.id = HTML_IDS.MAP;
+        const idealHeight = asNode.height.baseVal.value;
+        const idealWidth = asNode.width.baseVal.value;
+        const aspectRatio = idealHeight / idealWidth;
+        const eliminateVerticalWhitespace = () => {
+            const currentWidth = asNode.getBoundingClientRect().width;
+            const necessaryHeight = aspectRatio * currentWidth;
+            asNode.setAttribute(HTML_ATTRS.HEIGHT, `${necessaryHeight}px`);
+        };
+        eliminateVerticalWhitespace();
+        window.addEventListener('resize', eliminateVerticalWhitespace);
     });
 }
 
