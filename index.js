@@ -1,7 +1,7 @@
 // extract a 4 or 5 digit FIPS code from a string
 const FIPS_REGEX = new RegExp('(?<fips>\\d{4,5})$');
 
-// ID's of HTML elements and useful attributes
+/* constants for ID's, attributes, classes, and events */
 const HTML_IDS = {
     MAP: 'map',
     DATE_DISPLAY: 'date-display',
@@ -12,14 +12,32 @@ const HTML_IDS = {
     HELP_SYSTEM: 'help-system',
     OPTIONS_CONTAINER: 'options-container',
     START_STOP: 'start-stop'
-}
+};
 const HTML_ATTRS = {
     DATA_HELP: 'data-help',
     HEIGHT: 'height'
-}
+};
 const EVENTS = {
     CLICK: 'click'
-}
+};
+const CSS_CLASSES = {
+    DISABLED: 'disabled',
+    SELECTED: 'selected',
+    SPOTLIGHTED: 'spotlighted',
+    OVERSHADOWED: 'overshadowed'
+};
+
+/* text and classes for start-stop button */
+const START_STOP_BUTTON_TEXT = {
+    START: 'Start',
+    STOP: 'Stop',
+    LOADING: 'Loading...'
+};
+const START_STOP_BUTTON_CLASSES = {
+    STARTED: 'started',
+    STOPPED: 'stopped',
+    LOADING: 'loading'
+};
 
 // locations of resources
 const MAP_LOCATION = './usa_counties.svg';
@@ -511,7 +529,6 @@ const getAnimator = () => {
 
 /* abstract class for an input that can be disabled */
 class Toggable {
-    static DISABLED = 'disabled';
     constructor() {
         this.isDisabled = false;
     }
@@ -527,10 +544,6 @@ class Toggable {
 
 /* class representing buttons that come in opposing pairs */
 class Button extends Toggable {
-    static SELECTED = 'selected';
-    static SPOTLIGHTED = 'spotlighted';
-    static OVERSHADOWED = 'overshadowed';
-
     constructor(element) {
         super();
         this.element = element;
@@ -538,12 +551,12 @@ class Button extends Toggable {
     }
 
     select() {
-        this.element.classList.add(this.SELECTED);
+        this.element.classList.add(CSS_CLASSES.SELECTED);
         this.isSelected = true;
     }
 
     deselect() {
-        this.element.classList.remove(this.SELECTED);
+        this.element.classList.remove(CSS_CLASSES.SELECTED);
         this.isSelected = false;
     }
 
@@ -566,41 +579,41 @@ class Button extends Toggable {
         });
         this.element.addEventListener('mouseenter', () => {
             if (!this.isDisabled) {
-                this.element.classList.add(this.SPOTLIGHTED);
-                opposing.element.classList.add(this.OVERSHADOWED);
+                this.element.classList.add(CSS_CLASSES.SPOTLIGHTED);
+                opposing.element.classList.add(CSS_CLASSES.OVERSHADOWED);
             }
         });
 
         this.element.addEventListener('mouseleave', () => {
             if (!this.isDisabled) {
-                this.element.classList.remove(this.SPOTLIGHTED);
-                opposing.element.classList.remove(this.OVERSHADOWED);
+                this.element.classList.remove(CSS_CLASSES.SPOTLIGHTED);
+                opposing.element.classList.remove(CSS_CLASSES.OVERSHADOWED);
             }
         });
 
         opposing.element.addEventListener('mouseenter', () => {
             if (!this.isDisabled) {
-                opposing.element.classList.toggle(this.SPOTLIGHTED, true);
-                this.element.classList.toggle(this.OVERSHADOWED, true);
+                opposing.element.classList.toggle(CSS_CLASSES.SPOTLIGHTED, true);
+                this.element.classList.toggle(CSS_CLASSES.OVERSHADOWED, true);
             }
         });
 
         opposing.element.addEventListener('mouseleave', () => {
             if (!this.isDisabled) {
-                opposing.element.classList.toggle(this.SPOTLIGHTED, false);
-                this.element.classList.toggle(this.OVERSHADOWED, false);
+                opposing.element.classList.toggle(CSS_CLASSES.SPOTLIGHTED, false);
+                this.element.classList.toggle(CSS_CLASSES.OVERSHADOWED, false);
             }
         });
     }
 
     disable() {
         super.disable();
-        this.element.classList.add(this.DISABLED);
+        this.element.classList.add(CSS_CLASSES.DISABLED);
     }
 
     enable() {
         super.enable();
-        this.element.classList.remove(this.DISABLED);
+        this.element.classList.remove(CSS_CLASSES.DISABLED);
     }
 }
 
@@ -627,14 +640,14 @@ class RangeSelector extends Toggable {
 
     disable() {
         super.disable();
-        this.input.toggleAttribute(this.DISABLED, true);
-        this.inputWrapper.classList.add(this.DISABLED);
+        this.input.toggleAttribute(CSS_CLASSES.DISABLED, true);
+        this.inputWrapper.classList.add(CSS_CLASSES.DISABLED);
     }
 
     enable() {
         super.enable();
-        this.input.toggleAttribute(this.DISABLED, false);
-        this.inputWrapper.classList.remove(this.DISABLED);
+        this.input.toggleAttribute(CSS_CLASSES.DISABLED, false);
+        this.inputWrapper.classList.remove(CSS_CLASSES.DISABLED);
     }
 }
 
@@ -655,12 +668,12 @@ class ValueSelector extends Toggable {
 
     disable() {
         super.disable();
-        this.element.toggleAttribute(this.DISABLED, true);
+        this.element.toggleAttribute(CSS_CLASSES.DISABLED, true);
     }
 
     enable() {
         super.enable();
-        this.element.toggleAttribute(this.DISABLED, false);
+        this.element.toggleAttribute(CSS_CLASSES.DISABLED, false);
     }
 }
 
@@ -700,18 +713,6 @@ const loadInputs = () => {
 
 
 class UI {
-    static START_STOP_BUTTON_TEXT = {
-        START: 'Start',
-        STOP: 'Stop',
-        LOADING: 'Loading...'
-    };
-
-    static START_STOP_BUTTON_CLASSES = {
-        STARTED: 'started',
-        STOPPED: 'stopped',
-        LOADING: 'loading'
-    }
-
     constructor(startStopButton, { buttons, rangeSelectors, valueSelectors }) {
         this.startStopButton = startStopButton;
         this.buttons = buttons;
@@ -719,7 +720,7 @@ class UI {
         this.valueSelectors = valueSelectors;
 
         this.initializeInputs();
-        startStopButton.textContent = this.START_STOP_BUTTON_TEXT.START;
+        startStopButton.textContent = START_STOP_BUTTON_TEXT.START;
         this.markAnimationStopped();
         startStopButton.addEventListener(
             EVENTS.CLICK, () => this.playAnimationFromInput(), { once: true });
@@ -756,11 +757,11 @@ class UI {
     };
 
     markAnimationLoading() {
-        this.startStopButton.textContent = this.START_STOP_BUTTON_TEXT.LOADING;
+        this.startStopButton.textContent = START_STOP_BUTTON_TEXT.LOADING;
         this.startStopButton.classList.remove(
-            this.START_STOP_BUTTON_CLASSES.STOPPED);
+            START_STOP_BUTTON_CLASSES.STOPPED);
         this.startStopButton.classList.add(
-            this.START_STOP_BUTTON_CLASSES.LOADING);
+            START_STOP_BUTTON_CLASSES.LOADING);
     }
 
     markAnimationStarted() {
@@ -769,11 +770,11 @@ class UI {
             selector => selector.disable());
         Object.values(this.valueSelectors).forEach(
             selector => selector.disable());
-        this.startStopButton.textContent = this.START_STOP_BUTTON_TEXT.STOP;
+        this.startStopButton.textContent = START_STOP_BUTTON_TEXT.STOP;
         this.startStopButton.classList.remove(
-            this.START_STOP_BUTTON_CLASSES.LOADING);
+            START_STOP_BUTTON_CLASSES.LOADING);
         this.startStopButton.classList.add(
-            this.START_STOP_BUTTON_CLASSES.STARTED);
+            START_STOP_BUTTON_CLASSES.STARTED);
     }
 
     markAnimationStopped() {
@@ -782,11 +783,11 @@ class UI {
             selector => selector.enable());
         Object.values(this.valueSelectors).forEach(
             selector => selector.enable());
-        this.startStopButton.textContent = this.START_STOP_BUTTON_TEXT.START;
+        this.startStopButton.textContent = START_STOP_BUTTON_TEXT.START;
         this.startStopButton.classList.remove(
-            this.START_STOP_BUTTON_CLASSES.STARTED);
+            START_STOP_BUTTON_CLASSES.STARTED);
         this.startStopButton.classList.add(
-            this.START_STOP_BUTTON_CLASSES.STOPPED);
+            START_STOP_BUTTON_CLASSES.STOPPED);
     }
 
     /* play the animation matching the user's selected options */
@@ -797,7 +798,7 @@ class UI {
         sourceFlag += change.selected ? TYPE.change : TYPE.cumulative;
         sourceFlag += perCapita.selected ? VALUE.perCapita : VALUE.total;
 
-        this.startStopButton.textContent = this.START_STOP_BUTTON_TEXT.LOADING;
+        this.startStopButton.textContent = START_STOP_BUTTON_TEXT.LOADING;
         const { trailingAverageSelector, speedSelector } = this.rangeSelectors;
         const basic = await getBasicDataset(
             sourceFlag, trailingAverageSelector.value);
