@@ -77,7 +77,7 @@ initializeDataEndpoint(COUNTY_POPULATIONS_CACHE, COUNTY_POPULATIONS_META,
 
 // function to block external access to the provided path by returning a 403
 const blockEndpoint = (path) => {
-    PROXY.get(`/${path}`, (req, res) => res.send(403).end());
+    PROXY.get(`/${path}`, (req, res) => res.sendStatus(403).end());
 };
 
 // block access to auxiliary files
