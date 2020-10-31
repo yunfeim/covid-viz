@@ -511,7 +511,7 @@ const getAnimator = () => {
 
 /* abstract class for an input that can be disabled */
 class Toggable {
-    DISABLED = 'disabled';
+    static DISABLED = 'disabled';
     constructor() {
         this.isDisabled = false;
     }
@@ -527,9 +527,9 @@ class Toggable {
 
 /* class representing buttons that come in opposing pairs */
 class Button extends Toggable {
-    SELECTED = 'selected';
-    SPOTLIGHTED = 'spotlighted';
-    OVERSHADOWED = 'overshadowed';
+    static SELECTED = 'selected';
+    static SPOTLIGHTED = 'spotlighted';
+    static OVERSHADOWED = 'overshadowed';
 
     constructor(element) {
         super();
@@ -700,13 +700,13 @@ const loadInputs = () => {
 
 
 class UI {
-    START_STOP_BUTTON_TEXT = {
+    static START_STOP_BUTTON_TEXT = {
         START: 'Start',
         STOP: 'Stop',
         LOADING: 'Loading...'
     };
 
-    START_STOP_BUTTON_CLASSES = {
+    static START_STOP_BUTTON_CLASSES = {
         STARTED: 'started',
         STOPPED: 'stopped',
         LOADING: 'loading'
