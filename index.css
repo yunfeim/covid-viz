@@ -9,7 +9,7 @@
 body {
     max-width: 80ch;
     margin: 0 auto;
-    margin-block-end: 4rem;
+    margin-block-end: 2rem;
     cursor: default;
 }
 
@@ -170,6 +170,24 @@ button {
 }
 
 #attribution {
-    margin-block-start: 2rem;
+    margin: 2rem 0;
     text-align: center;
+}
+
+#github-link {
+    display: block;
+    margin: 2rem auto;
+    width: max-content;
+    font-size: 1rem;
+    padding: 0.5em;
+    border-radius: 2em;
+}
+
+#github-link>a {
+    text-decoration: none;
+    color: black;
+}
+
+#github-link:hover {
+    background-color: var(--semi-bright-color);
 }
