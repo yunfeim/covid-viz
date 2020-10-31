@@ -523,7 +523,7 @@ class Toggable {
     enable() {
         this.isDisabled = false;
     }
-};
+}
 
 /* class representing buttons that come in opposing pairs */
 class Button extends Toggable {
@@ -636,7 +636,7 @@ class RangeSelector extends Toggable {
         this.input.toggleAttribute(this.DISABLED, false);
         this.inputWrapper.classList.remove(this.DISABLED);
     }
-};
+}
 
 /* wrapper class for HTML input elements */
 class ValueSelector extends Toggable {
@@ -662,7 +662,7 @@ class ValueSelector extends Toggable {
         super.enable();
         this.element.toggleAttribute(this.DISABLED, false);
     }
-};
+}
 
 /* load buttons from HTML and create mapping from strings to Button
 // and RangeSelector classes */
