@@ -81,10 +81,8 @@ const blockEndpoint = (path) => {
 };
 
 // block access to auxiliary files
-[CUMULATIVE_CASES_CACHE, CUMULATIVE_CASES_META,
-    CUMULATIVE_DEATHS_CACHE, CUMULATIVE_DEATHS_META,
-    COUNTY_POPULATIONS_CACHE, COUNTY_POPULATIONS_META].forEach(
-        path => blockEndpoint(path));
+[CUMULATIVE_CASES_META, CUMULATIVE_DEATHS_META, COUNTY_POPULATIONS_META].
+    forEach(blockEndpoint);
 
 // block access to server logs
 blockEndpoint(LOG_LOC);
