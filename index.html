@@ -20,16 +20,16 @@
     <main>
         <section id="options-container">
             <article class="binary-choice" id="quantity">
-                <button>Cases</button>
-                <button>Deaths</button>
+                <button type="button">Cases</button>
+                <button type="button">Deaths</button>
             </article>
             <article class="binary-choice" id="type" data-help="Whether to show the cumulative count for a region or to show the day-by-day change">
-                <button>Cumulative</button>
-                <button>Change</button>
+                <button type="button">Cumulative</button>
+                <button type="button">Change</button>
             </article>
             <article class="binary-choice" id="value" data-help="Whether to show the total count in a region or the total count divided by the corresponding population">
-                <button>Total</button>
-                <button>Per Capita</button>
+                <button type="button">Total</button>
+                <button type="button">Per Capita</button>
             </article>
             <article id="period-input">
                 <div class="date-choice">
@@ -56,13 +56,13 @@
                 </div>
             </article>
         </section>
-        <button id="start-stop"></button>
+        <button id="start-stop" type="button"></button>
         <section id="viz-container">
             <div id="date-display"></div>
             <svg id="map"></svg>
         </section>
         <div id="attribution">Virus and population statistics fetched daily from <a href="https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/">USAFacts.org</a> (used under CC BY-SA 4.0)</div>
-        <button id="github-link">
+        <button id="github-link" type="button">
             <a href="https://github.com/yunfeim/covid-viz">View code on Github</a>
         </button>
     </main>
