@@ -2,6 +2,5 @@
 
 /node_modules/
 
-/data/**
-# ensure that `data` folder exists but that datasets are untracked
-!/data/README.md
+/proxy_data/**
+!/proxy_data/placeholder

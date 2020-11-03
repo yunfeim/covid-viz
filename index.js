@@ -40,10 +40,10 @@ const START_STOP_BUTTON_CLASSES = {
 };
 
 // locations of resources
-const MAP_LOCATION = './usa_counties.svg';
-const CUMULATIVE_CASES_LOCATION = './data/cumulative_cases.csv';
-const CUMULATIVE_DEATHS_LOCATION = './data/cumulative_deaths.csv';
-const POPULATIONS_LOCATION = './data/county_populations.csv';
+const MAP_LOCATION = 'usa_counties.svg';
+const CUMULATIVE_CASES_LOCATION = 'proxy_data/cumulative_cases.csv';
+const CUMULATIVE_DEATHS_LOCATION = 'proxy_data/cumulative_deaths.csv';
+const POPULATIONS_LOCATION = 'proxy_data/county_populations.csv';
 
 const EARLIEST_START_DATE = "2020-01-22";
 const DEFAULT_START_DATE = "2020-03-01";
