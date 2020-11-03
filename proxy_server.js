@@ -5,13 +5,15 @@ const fileSystem = require('fs');
 const PROXY = serverCreator();
 const PORT = 8888;
 
-// location of server log, relative to current file
+// location of server log relative to current file
 const LOG_LOC = 'proxy_data/log.txt';
 
+// locations of data endpoints
 const CUMULATIVE_CASES_ENDPOINT = 'proxy_data/cumulative_cases.csv';
 const CUMULATIVE_DEATHS_ENDPOINT = 'proxy_data/cumulative_deaths.csv';
 const COUNTY_POPULATIONS_ENDPOINT = 'proxy_data/county_populations.csv';
 
+// locations of original data
 const CUMULATIVE_CASES_REMOTE = 'https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_confirmed_usafacts.csv';
 const CUMULATIVE_DEATHS_REMOTE = 'https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_deaths_usafacts.csv';
 const COUNTY_POPULATIONS_REMOTE = 'https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_county_population_usafacts.csv';
@@ -20,17 +22,17 @@ const COUNTY_POPULATIONS_REMOTE = 'https://usafactsstatic.blob.core.windows.net/
 const ONE_DAY = 1000 * 60 * 60 * 24;
 const FOREVER = Number.POSITIVE_INFINITY;
 
-// display a message and write it to the log file at `LOG_LOC`
+/* display a message and write it to the log file at `LOG_LOC` */
 const logMessage = (message) => {
     console.log(message);
     fileSystem.appendFileSync(LOG_LOC, `${message}\n`);
 };
 
-// function to set up endpoint for data file, making use of caching
-const initializeDataEndpoint = (cachePath, remoteURL, cacheLife = ONE_DAY) => {
+/* set up endpoint that mirrors provided remote URL, making use of caching */
+const initializeDataEndpoint = (endpoint, remoteURL, cacheLife = ONE_DAY) => {
     let cacheTime;
     let cacheData;
-    PROXY.get(`/${cachePath}`, (request, response) => {
+    PROXY.get(`/${endpoint}`, (request, response) => {
         Promise.resolve(
             (async () => {
                 response.setHeader('Content-Type', 'text/plain; charset=UTF-8');
@@ -61,6 +63,7 @@ initializeDataEndpoint(COUNTY_POPULATIONS_ENDPOINT, COUNTY_POPULATIONS_REMOTE,
 // block access to proxy server logs
 PROXY.get(`/${LOG_LOC}`, (req, res) => res.sendStatus(403).end());
 
+// start server
 PROXY.listen(PORT, () => {
     logMessage(`[${new Date()}] Server listening on ${PORT}`);
 });
