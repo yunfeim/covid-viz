@@ -788,6 +788,9 @@ class UI {
             START_STOP_BUTTON_CLASSES.STARTED);
         this.startStopButton.classList.add(
             START_STOP_BUTTON_CLASSES.STOPPED);
+        this.startStopButton.addEventListener(EVENTS.CLICK, () => {
+            this.playAnimationFromInput();
+        }, { once: true });
     }
 
     /* play the animation matching the user's selected options */
@@ -809,16 +812,23 @@ class UI {
 
         const { startAnimation, stopAnimation } = getAnimator();
         this.markAnimationLoading();
-        startAnimation(trimmed, undefined,
-            speedSelector.value, () => this.markAnimationStopped());
-        this.markAnimationStarted();
-        this.startStopButton.addEventListener(EVENTS.CLICK, () => {
+
+        const onStop = () => {
             stopAnimation();
             this.markAnimationStopped();
-            this.startStopButton.addEventListener(EVENTS.CLICK, () => {
-                this.playAnimationFromInput();
-            }, { once: true });
-        }, { once: true });
+        };
+
+        this.startStopButton.addEventListener(
+            EVENTS.CLICK, onStop, { once: true }
+        );
+
+        const onFinish = () => {
+            this.startStopButton.removeEventListener(EVENTS.CLICK, onStop);
+            this.markAnimationStopped();
+        };
+
+        startAnimation(trimmed, undefined, speedSelector.value, onFinish);
+        this.markAnimationStarted();
     }
 }
 
